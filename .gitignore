@@ -1,0 +1,91 @@
+# Magento 2 .gitignore
+
+# Dossiers générés automatiquement
+/generated/*
+/pub/static/*
+/var/*
+/app/etc/env.php
+/app/etc/config.php
+
+# Exceptions spécifiques (pour garder certains fichiers importants)
+!/var/.htaccess
+!/var/composer_home
+!/pub/static/.htaccess
+
+# Warden-specific files
+/.warden/*
+/.idea/*
+/.vscode/*
+/.DS_Store
+
+# Fichiers de configuration locaux
+local.xml
+env.php
+config.local.php
+*.local.php
+
+# Dépendances
+/vendor/*
+/node_modules/*
+/composer.phar
+
+# Files that might appear in the root of a volume
+/.bash_history
+/.composer
+/.dockerignore
+/.htaccess.sample
+/.php_cs.cache
+/.php_cs.dist
+/.php-cs-fixer.cache
+/.user.ini
+/auth.json
+/auth.json.sample
+
+# Logs
+/var/log/*
+*.log
+
+# Cache
+/var/cache/*
+/var/page_cache/*
+/var/view_preprocessed/*
+
+# Session
+/var/session/*
+
+# Backups
+/var/backups/*
+
+# Media
+/pub/media/*
+# Excepté la structure .htaccess et les placeholders
+!/pub/media/.htaccess
+!/pub/media/captcha
+!/pub/media/customer/.htaccess
+!/pub/media/downloadable/.htaccess
+!/pub/media/import/.htaccess
+
+# Archives et fichiers temporaires
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+*.tgz
+*.bak
+*.swp
+*.swo
+*~
+
+# Fichiers de développement
+/dev/tests/integration/tmp/*
+/dev/tests/integration/var/*
+/dev/tests/functional/generated/*
+/dev/tests/acceptance/tests/_output/*
+/dev/tests/js/node_modules/*
+/dev/tests/js/coverage/*
+/dev/tests/js/dist/*
+/dev/tests/static/testsuite/Magento/Test/Integrity/_files/blacklist/composer_root_modules/*
+
+# Composer auth file
+auth.json
