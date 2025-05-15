@@ -1,0 +1,64 @@
+<?php
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+?>
+<div class="footer-container" style="background-color: #E0E7FF; color: #1F2937; padding-top: 2rem;">
+    <div class="footer content">
+        <div class="footer-top" style="display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: 2rem;">
+            <div class="footer-logo" style="flex: 1; min-width: 200px; margin-bottom: 1rem;">
+                <img src="<?= $block->getViewFileUrl('images/logo.svg') ?>" alt="Relaxation Logo" style="max-height: 50px; margin-bottom: 1rem;">
+                <p style="font-size: 0.9rem;">Votre partenaire bien-être au quotidien.</p>
+            </div>
+
+            <div class="footer-links" style="flex: 2; display: flex; flex-wrap: wrap;">
+                <div class="links-column" style="flex: 1; min-width: 150px; margin-bottom: 1rem;">
+                    <h4 style="font-weight: 600; margin-bottom: 0.5rem;">Informations</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('about-us') ?>" style="color: #1F2937; text-decoration: none;">À propos</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('contact') ?>" style="color: #1F2937; text-decoration: none;">Contact</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('faq') ?>" style="color: #1F2937; text-decoration: none;">FAQ</a></li>
+                    </ul>
+                </div>
+
+                <div class="links-column" style="flex: 1; min-width: 150px; margin-bottom: 1rem;">
+                    <h4 style="font-weight: 600; margin-bottom: 0.5rem;">Juridique</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('privacy-policy') ?>" style="color: #1F2937; text-decoration: none;">Politique de confidentialité</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('terms-conditions') ?>" style="color: #1F2937; text-decoration: none;">Conditions générales</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('shipping-returns') ?>" style="color: #1F2937; text-decoration: none;">Livraisons & Retours</a></li>
+                    </ul>
+                </div>
+
+                <div class="links-column" style="flex: 1; min-width: 150px; margin-bottom: 1rem;">
+                    <h4 style="font-weight: 600; margin-bottom: 0.5rem;">Mon compte</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('customer/account') ?>" style="color: #1F2937; text-decoration: none;">Mon compte</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('sales/order/history') ?>" style="color: #1F2937; text-decoration: none;">Mes commandes</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="<?= $block->getUrl('wishlist') ?>" style="color: #1F2937; text-decoration: none;">Ma liste d'envies</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom" style="border-top: 1px solid rgba(31, 41, 55, 0.1); padding-top: 1rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+            <div class="copyright" style="flex: 1; min-width: 200px; margin-bottom: 1rem;">
+                <small>&copy; <?= date('Y') ?> Relaxation. Tous droits réservés.</small>
+            </div>
+
+            <div class="payment-methods" style="margin-bottom: 1rem;">
+                <span style="margin-right: 0.5rem;">💳</span>
+                <span style="margin-right: 0.5rem;">💳</span>
+                <span style="margin-right: 0.5rem;">💳</span>
+                <span>💳</span>
+            </div>
+
+            <div class="social-links" style="margin-bottom: 1rem;">
+                <a href="#" style="color: #6366F1; margin-right: 1rem; text-decoration: none;">📱</a>
+                <a href="#" style="color: #6366F1; margin-right: 1rem; text-decoration: none;">📱</a>
+                <a href="#" style="color: #6366F1; text-decoration: none;">📱</a>
+            </div>
+        </div>
+    </div>
+</div>

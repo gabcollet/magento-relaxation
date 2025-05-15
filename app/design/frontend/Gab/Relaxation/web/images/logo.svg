@@ -1,0 +1,6 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="60" rx="8" fill="#F9FAFB"/>
+    <path d="M20 30C20 22.8203 25.8203 17 33 17H55C62.1797 17 68 22.8203 68 30C68 37.1797 62.1797 43 55 43H33C25.8203 43 20 37.1797 20 30Z" fill="#6366F1"/>
+    <path d="M80 25H180V35H80V25Z" fill="#A7F3D0"/>
+    <text x="100" y="37" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="#1F2937" text-anchor="middle">RELAXATION</text>
+</svg>

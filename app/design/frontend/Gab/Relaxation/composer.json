@@ -1,0 +1,15 @@
+{
+    "name": "gab/relaxation-theme",
+    "description": "Thème personnalisé basé sur Luma pour niche relaxation",
+    "type": "magento2-theme",
+    "version": "1.0.0",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ]
+    }
+}
