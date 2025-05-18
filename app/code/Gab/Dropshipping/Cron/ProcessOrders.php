@@ -80,8 +80,6 @@ class ProcessOrders
             $this->searchCriteriaBuilder->addFilter('status', $orderStatuses, 'in');
 
             // Only process orders that haven't been sent to CJ yet
-            // We'll use a custom field 'dropship_processed' to track this
-            // You would need to add this field to your orders table
             $this->searchCriteriaBuilder->addFilter('dropship_processed', 0);
 
             $searchCriteria = $this->searchCriteriaBuilder->create();
@@ -168,7 +166,7 @@ class ProcessOrders
                 // $order->setData('cj_order_id', $cjOrderId);
 
                 // Mark the order as processed
-                // $order->setData('dropship_processed', 1);
+                $order->setData('dropship_processed', 1);
 
                 // Add a comment to the order
                 $order->addCommentToStatusHistory(

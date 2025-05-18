@@ -1,5 +1,4 @@
 <?php
-
 namespace Gab\Dropshipping\Controller\Adminhtml\Dashboard;
 
 use Magento\Backend\App\Action;
@@ -8,7 +7,7 @@ use Magento\Framework\View\Result\PageFactory;
 
 class Index extends Action
 {
-    const ADMIN_RESOURCE = 'Gab_Dropshipping::dashboard';
+    const ADMIN_RESOURCE = 'Gab_Dropshipping::dropshipping_dashboard'; // Updated to match new menu ID
 
     /**
      * @var PageFactory
@@ -20,10 +19,9 @@ class Index extends Action
      * @param PageFactory $resultPageFactory
      */
     public function __construct(
-        Context     $context,
+        Context $context,
         PageFactory $resultPageFactory
-    )
-    {
+    ) {
         parent::__construct($context);
         $this->resultPageFactory = $resultPageFactory;
     }
@@ -36,7 +34,7 @@ class Index extends Action
     public function execute()
     {
         $resultPage = $this->resultPageFactory->create();
-        $resultPage->setActiveMenu('Gab_Dropshipping::dashboard');
+        $resultPage->setActiveMenu('Gab_Dropshipping::dropshipping_dashboard');
         $resultPage->getConfig()->getTitle()->prepend(__('Dropshipping Dashboard'));
 
         return $resultPage;
