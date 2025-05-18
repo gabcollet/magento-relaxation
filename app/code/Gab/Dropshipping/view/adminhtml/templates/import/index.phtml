@@ -1,0 +1,108 @@
+<?php
+/**
+ * @var \Magento\Backend\Block\Template $block
+ */
+?>
+<div class="dropshipping-import">
+    <h2><?= $block->escapeHtml(__('Import Products from CJ Dropshipping')) ?></h2>
+
+    <div class="search-box">
+        <form action="<?= $block->escapeUrl($block->getUrl('*/*/search')) ?>" method="get" id="product-search-form">
+            <div class="search-field">
+                <label for="search-term"><?= $block->escapeHtml(__('Search Products:')) ?></label>
+                <input type="text" id="search-term" name="term" placeholder="<?= $block->escapeHtml(__('Enter keywords...')) ?>" />
+                <button type="submit" class="action-primary"><?= $block->escapeHtml(__('Search')) ?></button>
+            </div>
+            <div class="search-options">
+                <label><?= $block->escapeHtml(__('Categories:')) ?></label>
+                <div class="options-container">
+                    <div class="option">
+                        <input type="checkbox" id="cat-relaxation" name="categories[]" value="relaxation" />
+                        <label for="cat-relaxation"><?= $block->escapeHtml(__('Relaxation')) ?></label>
+                    </div>
+                    <div class="option">
+                        <input type="checkbox" id="cat-light-therapy" name="categories[]" value="light-therapy" />
+                        <label for="cat-light-therapy"><?= $block->escapeHtml(__('Light Therapy')) ?></label>
+                    </div>
+                    <div class="option">
+                        <input type="checkbox" id="cat-massage" name="categories[]" value="massage" />
+                        <label for="cat-massage"><?= $block->escapeHtml(__('Massage')) ?></label>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="import-instructions">
+        <h3><?= $block->escapeHtml(__('How to Import Products')) ?></h3>
+        <ol>
+            <li><?= $block->escapeHtml(__('Search for products by keywords or browse categories')) ?></li>
+            <li><?= $block->escapeHtml(__('Select products from search results')) ?></li>
+            <li><?= $block->escapeHtml(__('Configure import settings (pricing, inventory, etc.)')) ?></li>
+            <li><?= $block->escapeHtml(__('Click "Import Selected Products"')) ?></li>
+        </ol>
+        <p><?= $block->escapeHtml(__('Note: Product data will be imported with your configured markup settings from the module configuration.')) ?></p>
+    </div>
+
+    <div class="search-results">
+        <p class="no-results"><?= $block->escapeHtml(__('Use the search form above to find products.')) ?></p>
+        <!-- Results will be loaded here after search -->
+    </div>
+</div>
+
+<style>
+    .dropshipping-import {
+        padding: 20px;
+    }
+    .search-box {
+        background: #fff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e3e3e3;
+        border-radius: 5px;
+    }
+    .search-field {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .search-field input {
+        flex: 1;
+        padding: 8px 12px;
+    }
+    .search-options {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .options-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    .import-instructions {
+        background: #f5f7ff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        border-left: 4px solid #6366F1;
+    }
+    .import-instructions h3 {
+        margin-top: 0;
+    }
+    .import-instructions ol {
+        padding-left: 20px;
+    }
+    .search-results {
+        background: #fff;
+        padding: 20px;
+        border: 1px solid #e3e3e3;
+        border-radius: 5px;
+    }
+    .no-results {
+        text-align: center;
+        color: #6B7280;
+        font-style: italic;
+    }
+</style>

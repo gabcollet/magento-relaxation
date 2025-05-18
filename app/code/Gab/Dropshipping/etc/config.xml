@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <dropshipping>
+            <general>
+                <enabled>0</enabled>
+                <api_url>https://developers.cjdropshipping.com/api</api_url>
+            </general>
+            <import>
+                <markup_percentage>30</markup_percentage>
+                <default_stock>100</default_stock>
+                <auto_import_cron>0</auto_import_cron>
+                <cron_frequency>daily</cron_frequency>
+            </import>
+            <orders>
+                <auto_submit>0</auto_submit>
+                <order_status>processing</order_status>
+            </orders>
+        </dropshipping>
+    </default>
+</config>

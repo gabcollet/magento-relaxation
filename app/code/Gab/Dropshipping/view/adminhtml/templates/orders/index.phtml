@@ -1,0 +1,120 @@
+<?php
+/**
+ * @var \Magento\Backend\Block\Template $block
+ */
+?>
+<div class="dropshipping-orders">
+    <h2><?= $block->escapeHtml(__('Dropship Orders Management')) ?></h2>
+
+    <div class="order-filters">
+        <form action="<?= $block->escapeUrl($block->getUrl('*/*/filter')) ?>" method="get" id="order-filter-form">
+            <div class="filter-fields">
+                <div class="field">
+                    <label for="filter-status"><?= $block->escapeHtml(__('Status:')) ?></label>
+                    <select id="filter-status" name="status">
+                        <option value=""><?= $block->escapeHtml(__('All')) ?></option>
+                        <option value="pending"><?= $block->escapeHtml(__('Pending')) ?></option>
+                        <option value="processing"><?= $block->escapeHtml(__('Processing')) ?></option>
+                        <option value="shipped"><?= $block->escapeHtml(__('Shipped')) ?></option>
+                        <option value="delivered"><?= $block->escapeHtml(__('Delivered')) ?></option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="filter-date-from"><?= $block->escapeHtml(__('From:')) ?></label>
+                    <input type="date" id="filter-date-from" name="date_from" />
+                </div>
+                <div class="field">
+                    <label for="filter-date-to"><?= $block->escapeHtml(__('To:')) ?></label>
+                    <input type="date" id="filter-date-to" name="date_to" />
+                </div>
+                <div class="field">
+                    <button type="submit" class="action-primary"><?= $block->escapeHtml(__('Apply Filters')) ?></button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="order-actions">
+        <button type="button" class="action-secondary" id="sync-orders">
+            <?= $block->escapeHtml(__('Sync Order Status')) ?>
+        </button>
+        <button type="button" class="action-primary" id="submit-orders">
+            <?= $block->escapeHtml(__('Submit Pending Orders')) ?>
+        </button>
+    </div>
+
+    <div class="orders-grid">
+        <table class="data-grid">
+            <thead>
+            <tr>
+                <th><?= $block->escapeHtml(__('Order ID')) ?></th>
+                <th><?= $block->escapeHtml(__('Date')) ?></th>
+                <th><?= $block->escapeHtml(__('Customer')) ?></th>
+                <th><?= $block->escapeHtml(__('Status')) ?></th>
+                <th><?= $block->escapeHtml(__('CJ Order ID')) ?></th>
+                <th><?= $block->escapeHtml(__('Tracking')) ?></th>
+                <th><?= $block->escapeHtml(__('Actions')) ?></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td colspan="7"><?= $block->escapeHtml(__('No orders found.')) ?></td>
+            </tr>
+            <!-- Orders will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .dropshipping-orders {
+        padding: 20px;
+    }
+    .order-filters {
+        background: #fff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e3e3e3;
+        border-radius: 5px;
+    }
+    .filter-fields {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-end;
+    }
+    .field {
+        display: flex;
+        flex-direction: column;
+        min-width: 160px;
+    }
+    .field label {
+        margin-bottom: 5px;
+    }
+    .order-actions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .orders-grid {
+        background: #fff;
+        padding: 20px;
+        border: 1px solid #e3e3e3;
+        border-radius: 5px;
+    }
+    .data-grid {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .data-grid th, .data-grid td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e3e3e3;
+    }
+    .data-grid th {
+        background: #f8f8f8;
+    }
+    .data-grid tbody tr:hover {
+        background: #f5f7ff;
+    }
+</style>

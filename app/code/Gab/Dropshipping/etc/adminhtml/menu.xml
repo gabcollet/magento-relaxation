@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Gab_Dropshipping::dropshipping" title="Dropshipping" module="Gab_Dropshipping" sortOrder="50" resource="Gab_Dropshipping::dropshipping"/>
+        <add id="Gab_Dropshipping::dashboard" title="Dashboard" module="Gab_Dropshipping" sortOrder="10" parent="Gab_Dropshipping::dropshipping" action="dropshipping/dashboard" resource="Gab_Dropshipping::dashboard"/>
+        <add id="Gab_Dropshipping::import" title="Import Products" module="Gab_Dropshipping" sortOrder="20" parent="Gab_Dropshipping::dropshipping" action="dropshipping/import" resource="Gab_Dropshipping::import"/>
+        <add id="Gab_Dropshipping::orders" title="Dropship Orders" module="Gab_Dropshipping" sortOrder="30" parent="Gab_Dropshipping::dropshipping" action="dropshipping/orders" resource="Gab_Dropshipping::orders"/>
+        <add id="Gab_Dropshipping::config" title="Settings" module="Gab_Dropshipping" sortOrder="40" parent="Gab_Dropshipping::dropshipping" action="adminhtml/system_config/edit/section/dropshipping" resource="Gab_Dropshipping::config"/>
+    </menu>
+</config>

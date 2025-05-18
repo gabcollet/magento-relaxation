@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="gab_dropshipping_import_products" instance="Gab\Dropshipping\Cron\ImportProducts" method="execute">
+            <schedule>0 0 * * *</schedule>
+        </job>
+        <job name="gab_dropshipping_sync_inventory" instance="Gab\Dropshipping\Cron\SyncInventory" method="execute">
+            <schedule>0 */6 * * *</schedule>
+        </job>
+        <job name="gab_dropshipping_process_orders" instance="Gab\Dropshipping\Cron\ProcessOrders" method="execute">
+            <schedule>*/15 * * * *</schedule>
+        </job>
+    </group>
+</config>

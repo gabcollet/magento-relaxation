@@ -1,0 +1,29 @@
+.admin__menu .item-dropshipping > a:before {
+    content: '\e602'; /* Box icon from Magento admin icons */
+    font-size: 1.8rem;
+    padding-top: 0.2rem;
+}
+
+.admin__menu .item-dropshipping-dashboard > a:before {
+    content: '\e604'; /* Dashboard icon */
+    font-size: 1.8rem;
+    padding-top: 0.4rem;
+}
+
+.admin__menu .item-dropshipping-import > a:before {
+    content: '\e636'; /* Download icon */
+    font-size: 1.8rem;
+    padding-top: 0.4rem;
+}
+
+.admin__menu .item-dropshipping-orders > a:before {
+    content: '\e619'; /* List icon */
+    font-size: 1.8rem;
+    padding-top: 0.4rem;
+}
+
+.admin__menu .item-dropshipping-config > a:before {
+    content: '\e610'; /* Settings icon */
+    font-size: 1.8rem;
+    padding-top: 0.4rem;
+}
