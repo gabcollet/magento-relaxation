@@ -5,7 +5,7 @@ use Magento\Config\Block\System\Config\Form\Field;
 use Magento\Backend\Block\Template\Context;
 use Magento\Framework\Data\Form\Element\AbstractElement;
 
-class TestButton extends Field
+class ApiTestButton extends Field
 {
     /**
      * @var string

@@ -24,7 +24,7 @@
                 </field>
                 <field id="test_connection" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Test API Connection</label>
-                    <frontend_model>Gab\Dropshipping\Block\Adminhtml\System\Config\TestButton</frontend_model>
+                    <frontend_model>Gab\Dropshipping\Block\Adminhtml\System\Config\ApiTestButton</frontend_model>
                     <comment>Click to test the connection with CJ Dropshipping API</comment>
                 </field>
             </group>
