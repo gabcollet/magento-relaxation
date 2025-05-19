@@ -83,8 +83,7 @@ class Search extends Action
                 'limit' => $limit
             ]);
 
-            // Appel à l'API CJ Dropshipping modifié pour utiliser le nouveau système de token
-            $response = $this->apiClient->getProducts($page, $limit, $searchTerm);
+            $response = $this->apiClient->getProducts($page, $limit, $searchTerm, $categories);
 
             if (isset($response['data']) && isset($response['data']['list'])) {
                 return $result->setData([

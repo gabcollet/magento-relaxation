@@ -423,4 +423,10 @@ class TokenManager
 
         return $info;
     }
+
+    public function registerAuthAttempt()
+    {
+        $cacheInstance = $this->getCache();
+        $cacheInstance->save((string)time(), self::CACHE_KEY_LAST_ATTEMPT, [], 3600);
+    }
 }

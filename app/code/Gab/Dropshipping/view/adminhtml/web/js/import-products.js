@@ -95,6 +95,9 @@ define([
                 resultsContainer.hide();
                 loadingMessage.insertAfter(noResultsMessage);
 
+                // Disable search button to prevent multiple requests
+                searchBtn.prop('disabled', true).addClass('disabled');
+
                 // Make AJAX request
                 $.ajax({
                     url: config.searchUrl,
@@ -110,6 +113,48 @@ define([
                     success: function(response) {
                         loadingMessage.remove();
 
+                        // Vérifier si l'erreur est liée à une limitation de taux
+                        if (!response.success && response.message && response.message.indexOf('Limitation des requêtes API') !== -1) {
+                            // Extraire le temps d'attente de l'erreur
+                            var waitTime = response.message.match(/attendre\s+(\d+)\s+secondes/);
+                            if (waitTime && waitTime[1]) {
+                                var seconds = parseInt(waitTime[1]);
+                                var timerElement = $('<div class="rate-limit-timer">Réessayer dans <span>' + seconds + '</span> secondes</div>');
+                                noResultsMessage.html(response.message + '<br>')
+                                    .append(timerElement)
+                                    .addClass('message-warning')
+                                    .show();
+
+                                // Démarrer un compte à rebours
+                                var timer = setInterval(function() {
+                                    seconds--;
+                                    timerElement.find('span').text(seconds);
+                                    if (seconds <= 0) {
+                                        clearInterval(timer);
+                                        timerElement.text('Vous pouvez maintenant réessayer.');
+
+                                        // Activer le bouton de recherche
+                                        searchBtn.prop('disabled', false).removeClass('disabled');
+
+                                        // Changer le style du message
+                                        noResultsMessage.removeClass('message-warning').addClass('message-info');
+                                    }
+                                }, 1000);
+                            } else {
+                                noResultsMessage.text(response.message).addClass('message-warning').show();
+
+                                // Réactiver le bouton après 3 secondes
+                                setTimeout(function() {
+                                    searchBtn.prop('disabled', false).removeClass('disabled');
+                                }, 3000);
+                            }
+                            resultsContainer.hide();
+                            return;
+                        }
+
+                        // Réactiver le bouton de recherche
+                        searchBtn.prop('disabled', false).removeClass('disabled');
+
                         if (response.success && response.products && response.products.length > 0) {
                             // Render products
                             renderProducts(response.products);
@@ -121,19 +166,50 @@ define([
 
                             resultsContainer.show();
                             noResultsMessage.hide();
+
+                            // Scroll to results
+                            $('html, body').animate({
+                                scrollTop: resultsContainer.offset().top - 50
+                            }, 500);
                         } else {
                             // Show no results message
-                            noResultsMessage.text(response.message || $t('No products found. Please try different search terms.'));
-                            noResultsMessage.show();
+                            noResultsMessage.text(response.message || $t('No products found. Please try different search terms.'))
+                                .removeClass('message-warning message-info')
+                                .addClass('message-notice')
+                                .show();
                             resultsContainer.hide();
                         }
                     },
                     error: function(xhr, status, error) {
                         loadingMessage.remove();
-                        noResultsMessage.text($t('An error occurred during the search. Please try again.'));
-                        noResultsMessage.show();
+
+                        // Réactiver le bouton de recherche
+                        searchBtn.prop('disabled', false).removeClass('disabled');
+
+                        // Afficher un message d'erreur
+                        var errorMessage = '';
+
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            errorMessage = response.message || $t('An error occurred during the search. Please try again.');
+                        } catch (e) {
+                            errorMessage = $t('An error occurred during the search. Please try again.');
+                        }
+
+                        noResultsMessage.text(errorMessage)
+                            .removeClass('message-warning message-info')
+                            .addClass('message-error')
+                            .show();
                         resultsContainer.hide();
                         console.error('AJAX Error:', error);
+                    },
+                    complete: function() {
+                        // S'assurer que le bouton de recherche est réactivé en cas de problème inattendu
+                        if (searchBtn.prop('disabled')) {
+                            setTimeout(function() {
+                                searchBtn.prop('disabled', false).removeClass('disabled');
+                            }, 3000);
+                        }
                     }
                 });
             }

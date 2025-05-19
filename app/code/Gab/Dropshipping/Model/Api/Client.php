@@ -62,11 +62,21 @@ class Client
      * @param int $page
      * @param int $limit
      * @param string|null $searchTerm
+     * @param array $categories
      * @return array
      */
-    public function getProducts($page = 1, $limit = 10, $searchTerm = null)
+    public function getProducts($page = 1, $limit = 10, $searchTerm = null, $categories = [])
     {
-        $limit = max(10, $limit);
+        $limit = max(10, $limit); // Minimum page size for CJ API is 10
+
+        // Générer une clé de cache basée sur les paramètres de recherche
+        $cacheKey = 'cj_products_' . md5($page . '_' . $limit . '_' . $searchTerm . '_' . implode(',', $categories));
+        $cache = $this->getCacheInstance();
+        $cachedResult = $cache->load($cacheKey);
+
+        if ($cachedResult) {
+            return $this->json->unserialize($cachedResult);
+        }
 
         $params = [
             'pageNum' => $page,
@@ -77,7 +87,18 @@ class Client
             $params['productNameEn'] = $searchTerm;
         }
 
-        return $this->sendRequest('GET', '/product/list', $params);
+        if (!empty($categories)) {
+            $params['categoryId'] = implode(',', $categories);
+        }
+
+        $response = $this->sendRequest('GET', '/product/list', $params);
+
+        // Mettre en cache le résultat pour 5 minutes (300 secondes)
+        if (isset($response['data'])) {
+            $cache->save($this->json->serialize($response), $cacheKey, [], 300);
+        }
+
+        return $response;
     }
 
     /**
@@ -88,7 +109,7 @@ class Client
      */
     public function getProductDetails($pid)
     {
-        return $this->sendRequest('GET', '/product/detail', [
+        return $this->sendRequest('GET', '/product/query', [
             'pid' => $pid
         ]);
     }
@@ -101,7 +122,7 @@ class Client
      */
     public function getProductVariants($pid)
     {
-        return $this->sendRequest('GET', '/product/variant', [
+        return $this->sendRequest('GET', '/product/variant/query', [
             'pid' => $pid
         ]);
     }
@@ -240,8 +261,36 @@ class Client
 
             // Vérifier si nous avons atteint la limite de requêtes
             if (isset($parsedResponse['code']) && $parsedResponse['code'] == 1600200) {
-                // Limitation de requêtes, attendre et réessayer (pour les requêtes non d'authentification)
-                if ($endpoint !== '/authentication/getAccessToken' && $retryCount < 2) {
+                // Pour les requêtes d'authentification, appliquer la règle de limitation de 5 minutes
+                if ($endpoint === '/authentication/getAccessToken') {
+                    $this->tokenManager->registerAuthAttempt();
+                    return [
+                        'error' => 'Limitation des requêtes API: veuillez attendre 300 secondes avant de réessayer.',
+                        'canRetry' => false
+                    ];
+                }
+
+                // Pour les requêtes de recherche ou autres, appliquer une règle de limitation plus courte
+                if (strpos($endpoint, '/product') === 0) {
+                    $this->registerSearchAttempt(); // Créez cette méthode
+                    $waitTime = $this->getSearchWaitTime(); // Créez cette méthode
+
+                    if ($waitTime > 0) {
+                        return [
+                            'error' => 'Limitation des requêtes API pour la recherche: veuillez attendre ' . $waitTime . ' secondes avant de réessayer.',
+                            'canRetry' => false
+                        ];
+                    }
+
+                    // Si le temps d'attente est écoulé ou si nous pouvons réessayer
+                    if ($retryCount < 2) {
+                        sleep(5); // Attendre 5 secondes
+                        return $this->sendRequest($method, $endpoint, $params, $data, $retryCount + 1);
+                    }
+                }
+
+                // Pour les autres types de requêtes
+                if ($retryCount < 2) {
                     sleep(5); // Attendre 5 secondes
                     return $this->sendRequest($method, $endpoint, $params, $data, $retryCount + 1);
                 }
@@ -257,5 +306,50 @@ class Client
 
             return ['error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Enregistrer une tentative de recherche
+     *
+     * @return void
+     */
+    protected function registerSearchAttempt()
+    {
+        $cache = $this->getCacheInstance();
+        $cache->save((string)time(), 'cj_dropshipping_last_search_attempt', [], 3600);
+    }
+
+    /**
+     * Obtenir le temps d'attente pour la recherche
+     *
+     * @return int
+     */
+    protected function getSearchWaitTime()
+    {
+        $cache = $this->getCacheInstance();
+        $lastAttempt = $cache->load('cj_dropshipping_last_search_attempt');
+
+        if (!$lastAttempt) {
+            return 0;
+        }
+
+        $lastAttemptTime = (int)$lastAttempt;
+        $timeSinceLastAttempt = time() - $lastAttemptTime;
+        $waitTime = 60 - $timeSinceLastAttempt; // Limitation de 1 minute pour les recherches
+
+        return $waitTime > 0 ? $waitTime : 0;
+    }
+
+    /**
+     * Obtenir l'instance de cache
+     *
+     * @return \Magento\Framework\App\Cache
+     */
+    protected function getCacheInstance()
+    {
+        // Utilisez le même mécanisme de cache que TokenManager
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $cacheFrontendPool = $objectManager->get(\Magento\Framework\App\Cache\Frontend\Pool::class);
+        return $cacheFrontendPool->get('config')->getBackend();
     }
 }

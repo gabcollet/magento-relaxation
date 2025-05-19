@@ -860,19 +860,54 @@ class ImportProduct extends Action
         try {
             $images = [];
 
+            // Log les données du produit pour déboguer
+            $this->logger->debug('Product image data', [
+                'has_productImage' => isset($productData['productImage']),
+                'has_productImages' => isset($productData['productImages'])
+            ]);
+
             // Ajouter l'image principale si disponible
             if (isset($productData['productImage']) && !empty($productData['productImage'])) {
-                $images[] = $productData['productImage'];
+                // Vérifier si c'est une chaîne JSON
+                if (is_string($productData['productImage']) && $this->isJson($productData['productImage'])) {
+                    $decodedImages = json_decode($productData['productImage'], true);
+                    if (is_array($decodedImages) && !empty($decodedImages)) {
+                        foreach ($decodedImages as $img) {
+                            if (!empty($img)) {
+                                $images[] = $img;
+                            }
+                        }
+                    }
+                } else {
+                    $images[] = $productData['productImage'];
+                }
             }
 
             // Ajouter les images supplémentaires si disponibles
-            if (isset($productData['productImages']) && is_array($productData['productImages'])) {
-                foreach ($productData['productImages'] as $image) {
-                    if (!empty($image) && !in_array($image, $images)) {
-                        $images[] = $image;
+            if (isset($productData['productImages']) && !empty($productData['productImages'])) {
+                // Vérifier si c'est une chaîne JSON
+                if (is_string($productData['productImages']) && $this->isJson($productData['productImages'])) {
+                    $decodedImages = json_decode($productData['productImages'], true);
+                    if (is_array($decodedImages)) {
+                        foreach ($decodedImages as $img) {
+                            if (!empty($img) && !in_array($img, $images)) {
+                                $images[] = $img;
+                            }
+                        }
+                    }
+                } elseif (is_array($productData['productImages'])) {
+                    foreach ($productData['productImages'] as $image) {
+                        if (!empty($image) && !in_array($image, $images)) {
+                            $images[] = $image;
+                        }
                     }
                 }
             }
+
+            $this->logger->debug('Images to process', [
+                'count' => count($images),
+                'urls' => $images
+            ]);
 
             // Télécharger et ajouter les images au produit
             foreach ($images as $index => $imageUrl) {
@@ -880,8 +915,26 @@ class ImportProduct extends Action
                 $this->addProductImageFromUrl($product, $imageUrl, $isMain);
             }
         } catch (\Exception $e) {
-            $this->logger->error('Error adding product images: ' . $e->getMessage());
+            $this->logger->error('Error adding product images: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
         }
+    }
+
+    /**
+     * Check if a string is valid JSON
+     *
+     * @param string $string
+     * @return bool
+     */
+    protected function isJson($string)
+    {
+        if (!is_string($string)) {
+            return false;
+        }
+
+        json_decode($string);
+        return (json_last_error() == JSON_ERROR_NONE);
     }
 
     /**
@@ -895,42 +948,57 @@ class ImportProduct extends Action
     protected function addProductImageFromUrl($product, $imageUrl, $isMain = false)
     {
         try {
-            // Créer le répertoire temporaire si nécessaire
-            $tmpDir = $this->filesystem->getDirectoryWrite(DirectoryList::TMP);
-            $tmpPath = $tmpDir->getAbsolutePath('dropshipping_images');
-            if (!$this->file->fileExists($tmpPath)) {
-                $this->file->mkdir($tmpPath, 0777);
-            }
+            $this->logger->debug('Processing image URL', ['url' => $imageUrl]);
 
-            // Extraire le nom du fichier de l'URL
-            $fileName = basename(parse_url($imageUrl, PHP_URL_PATH));
-            if (empty($fileName)) {
-                // Générer un nom de fichier s'il ne peut pas être extrait
-                $fileName = 'image_' . md5($imageUrl) . '.jpg';
+            // S'assurer que l'URL est valide
+            if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                $this->logger->error('Invalid image URL', ['url' => $imageUrl]);
+                return;
             }
-
-            $filePath = $tmpPath . '/' . $fileName;
 
             // Télécharger l'image
+            $this->curl->setOptions([
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_TIMEOUT => 30
+            ]);
             $this->curl->get($imageUrl);
+            $statusCode = $this->curl->getStatus();
             $imageContent = $this->curl->getBody();
 
-            if (!empty($imageContent)) {
-                // Enregistrer l'image dans le répertoire temporaire
-                $this->file->write($filePath, $imageContent);
+            if ($statusCode == 200 && !empty($imageContent)) {
+                // Extraire le nom du fichier de l'URL
+                $fileName = basename(parse_url($imageUrl, PHP_URL_PATH));
+                if (empty($fileName) || strlen($fileName) > 90) {
+                    // Générer un nom de fichier s'il ne peut pas être extrait ou s'il est trop long
+                    $fileName = 'image_' . md5($imageUrl) . '.jpg';
+                }
+
+                // Obtenir le répertoire media
+                $mediaDirectory = $this->filesystem->getDirectoryWrite(DirectoryList::MEDIA);
+                $tempFilePath = 'import/' . $fileName;
+
+                // Enregistrer le contenu de l'image dans le répertoire media
+                $mediaDirectory->writeFile($tempFilePath, $imageContent);
 
                 // Ajouter l'image au produit
-                $product->addImageToMediaGallery($filePath, [
-                    $isMain ? 'image' : null,
-                    $isMain ? 'small_image' : null,
-                    $isMain ? 'thumbnail' : null
-                ], false, false);
+                $product->addImageToMediaGallery(
+                    $mediaDirectory->getAbsolutePath($tempFilePath),
+                    $isMain ? ['image', 'small_image', 'thumbnail'] : [],
+                    false,
+                    false
+                );
 
                 // Supprimer le fichier temporaire
-                $this->file->rm($filePath);
+                $mediaDirectory->delete($tempFilePath);
+
+                $this->logger->debug('Image added to product', ['is_main' => $isMain]);
             }
         } catch (\Exception $e) {
-            $this->logger->error('Error adding image from URL: ' . $e->getMessage());
+            $this->logger->error('Error adding image from URL: ' . $e->getMessage(), [
+                'url' => $imageUrl,
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 }

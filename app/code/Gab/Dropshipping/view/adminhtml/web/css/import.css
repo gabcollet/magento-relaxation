@@ -358,3 +358,49 @@
 .close-form:hover {
     color: #1F2937;
 }
+/* Styles pour les messages d'erreur et d'avertissement */
+.message-error {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    border-left: 4px solid #ef4444;
+}
+
+.message-warning {
+    background-color: #fffbeb;
+    color: #92400e;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    border-left: 4px solid #f59e0b;
+}
+
+.message-info {
+    background-color: #eff6ff;
+    color: #1e40af;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    border-left: 4px solid #3b82f6;
+}
+
+.message-notice {
+    background-color: #f3f4f6;
+    color: #374151;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    border-left: 4px solid #9ca3af;
+}
+
+.rate-limit-timer {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.rate-limit-timer span {
+    color: #ef4444;
+    font-size: 1.1em;
+}
