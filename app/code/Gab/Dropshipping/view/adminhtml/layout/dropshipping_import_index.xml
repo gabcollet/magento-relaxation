@@ -1,8 +1,12 @@
 <?xml version="1.0"?>
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="Gab_Dropshipping::css/import.css"/>
+        <script src="jquery/ui" />
+    </head>
     <body>
         <referenceContainer name="content">
-            <block class="Magento\Backend\Block\Template" name="gab_dropshipping_import" template="Gab_Dropshipping::import/index.phtml" />
+            <block class="Gab\Dropshipping\Block\Adminhtml\Import" name="gab_dropshipping_import" template="Gab_Dropshipping::import/index.phtml" />
         </referenceContainer>
     </body>
 </page>
