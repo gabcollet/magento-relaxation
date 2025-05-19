@@ -10,6 +10,7 @@ class Config
     const XML_PATH_ENABLED = 'dropshipping/general/enabled';
     const XML_PATH_API_KEY = 'dropshipping/general/api_key';
     const XML_PATH_API_URL = 'dropshipping/general/api_url';
+    const XML_PATH_EMAIL = 'dropshipping/general/email';
     const XML_PATH_MARKUP_PERCENTAGE = 'dropshipping/import/markup_percentage';
     const XML_PATH_DEFAULT_STOCK = 'dropshipping/import/default_stock';
     const XML_PATH_AUTO_IMPORT_CRON = 'dropshipping/import/auto_import_cron';
@@ -59,6 +60,22 @@ class Config
     {
         return $this->scopeConfig->getValue(
             self::XML_PATH_API_KEY,
+            $scopeType,
+            $scopeCode
+        );
+    }
+
+    /**
+     * Get Email
+     *
+     * @param string $scopeType
+     * @param null|string $scopeCode
+     * @return string
+     */
+    public function getEmail($scopeType = ScopeInterface::SCOPE_STORE, $scopeCode = null)
+    {
+        return $this->scopeConfig->getValue(
+            self::XML_PATH_EMAIL,
             $scopeType,
             $scopeCode
         );

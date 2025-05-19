@@ -4,8 +4,8 @@ namespace Gab\Dropshipping\Controller\Adminhtml\System\Config;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
-use Magento\Framework\HTTP\Client\Curl;
-use Magento\Framework\Serialize\Serializer\Json;
+use Gab\Dropshipping\Model\Api\TokenManager;
+use Gab\Dropshipping\Model\Api\Client;
 use Psr\Log\LoggerInterface;
 
 class TestConnection extends Action
@@ -21,14 +21,14 @@ class TestConnection extends Action
     protected $resultJsonFactory;
 
     /**
-     * @var Curl
+     * @var TokenManager
      */
-    protected $curl;
+    protected $tokenManager;
 
     /**
-     * @var Json
+     * @var Client
      */
-    protected $json;
+    protected $apiClient;
 
     /**
      * @var LoggerInterface
@@ -38,20 +38,20 @@ class TestConnection extends Action
     /**
      * @param Context $context
      * @param JsonFactory $resultJsonFactory
-     * @param Curl $curl
-     * @param Json $json
+     * @param TokenManager $tokenManager
+     * @param Client $apiClient
      * @param LoggerInterface $logger
      */
     public function __construct(
         Context $context,
         JsonFactory $resultJsonFactory,
-        Curl $curl,
-        Json $json,
+        TokenManager $tokenManager,
+        Client $apiClient,
         LoggerInterface $logger
     ) {
         $this->resultJsonFactory = $resultJsonFactory;
-        $this->curl = $curl;
-        $this->json = $json;
+        $this->tokenManager = $tokenManager;
+        $this->apiClient = $apiClient;
         $this->logger = $logger;
         parent::__construct($context);
     }
@@ -69,58 +69,75 @@ class TestConnection extends Action
             $params = $this->getRequest()->getParams();
             $this->logger->debug('Test connection params', $params);
 
-            // Vérifier que les paramètres nécessaires sont présents
-            if (!isset($params['api_key']) || !isset($params['api_url'])) {
+            // Vérifier la limitation des requêtes
+            $throttleInfo = $this->tokenManager->getAuthThrottleInfo();
+            if (!$throttleInfo['canAuthenticate']) {
                 return $result->setData([
                     'success' => false,
-                    'message' => __('API Key or API URL is missing.')
+                    'message' => __('Limitation des requêtes API: veuillez attendre %1 secondes avant de réessayer. CJ Dropshipping limite les demandes d\'authentification à une toutes les 5 minutes.', $throttleInfo['waitTime'])
                 ]);
             }
 
-            $apiKey = $params['api_key'];
-            $apiUrl = rtrim($params['api_url'], '/');
-
-            // Endpoint pour tester la connexion - utilisez un endpoint simple qui existe
-            $endpoint = $apiUrl . '/product/list';
-
-            // Configurer les en-têtes de la requête
-            $this->curl->addHeader('Content-Type', 'application/json');
-            $this->curl->addHeader('Accept', 'application/json');
-            $this->curl->addHeader('Authorization', 'Bearer ' . $apiKey);
-
-            // Envoyer la requête
-            $this->curl->get($endpoint);
-
-            // Vérifier le code de statut HTTP
-            $statusCode = $this->curl->getStatus();
-            $this->logger->debug('API Response Status Code', ['status' => $statusCode]);
-
-            if ($statusCode == 200) {
-                // La connexion a réussi
-                $responseBody = $this->curl->getBody();
-                $this->logger->debug('API Response Body', ['body' => $responseBody]);
-
-                return $result->setData([
-                    'success' => true,
-                    'message' => __('API connection successful! The endpoint responded with status code 200.')
-                ]);
+            // Si une erreur d'authentification précédente existe, l'afficher
+            if ($throttleInfo['errorMessage']) {
+                $errorNote = __('Erreur précédente: %1', $throttleInfo['errorMessage']);
             } else {
-                // La connexion a échoué
-                $responseBody = $this->curl->getBody();
-                $error = __('API connection failed. Status code: %1', $statusCode);
-                $this->logger->debug('API Error Response', ['body' => $responseBody]);
+                $errorNote = '';
+            }
+
+            // Effacer le cache des tokens pour forcer une nouvelle génération
+            $this->tokenManager->clearTokenCache();
+
+            // Essayer d'obtenir un token avec les identifiants fournis
+            $accessToken = $this->tokenManager->getAccessToken();
+
+            if (!$accessToken) {
+                // Obtenir les infos après la tentative
+                $throttleInfo = $this->tokenManager->getAuthThrottleInfo();
+                $errorMessage = $throttleInfo['errorMessage']
+                    ? $throttleInfo['errorMessage']
+                    : __('Impossible d\'obtenir un token d\'accès. Veuillez vérifier votre clé API et votre email.');
 
                 return $result->setData([
                     'success' => false,
-                    'message' => $error
+                    'message' => $errorMessage . ' ' . $errorNote
+                ]);
+            }
+
+            // Tester un appel API simple
+            $response = $this->apiClient->getProducts(1, 10);
+
+            if (isset($response['data'])) {
+                return $result->setData([
+                    'success' => true,
+                    'message' => __('Connexion API réussie! L\'authentification et la liste des produits fonctionnent.')
+                ]);
+            } else {
+                $error = isset($response['error']) ? $response['error'] :
+                    (isset($response['message']) ? $response['message'] : __('Erreur inconnue'));
+
+                // Vérifier si l'erreur est liée au paramètre pageSize
+                if (isset($response['code']) && $response['code'] == 1600300 &&
+                    strpos($error, 'pageSize') !== false) {
+
+                    // C'est juste une erreur de paramètre, pas d'authentification
+                    return $result->setData([
+                        'success' => false,
+                        'message' => __('Échec du test de l\'API : %1. Veuillez ajuster la taille de page minimale à 10 dans votre code.', $error)
+                    ]);
+                }
+
+                return $result->setData([
+                    'success' => false,
+                    'message' => __('Échec de la connexion API. Erreur: %1', $error) . ' ' . $errorNote
                 ]);
             }
         } catch (\Exception $e) {
-            $this->logger->error('Error testing CJ Dropshipping API connection: ' . $e->getMessage());
+            $this->logger->error('Erreur lors du test de connexion à l\'API CJ Dropshipping: ' . $e->getMessage());
 
             return $result->setData([
                 'success' => false,
-                'message' => __('An error occurred: %1', $e->getMessage())
+                'message' => __('Une erreur est survenue: %1', $e->getMessage())
             ]);
         }
     }

@@ -30,27 +30,30 @@ class Client
     protected $logger;
 
     /**
-     * @var string|null
+     * @var TokenManager
      */
-    protected $accessToken = null;
+    protected $tokenManager;
 
     /**
      * @param Config $config
      * @param Curl $curl
      * @param Json $json
      * @param LoggerInterface $logger
+     * @param TokenManager $tokenManager
      */
     public function __construct(
         Config          $config,
         Curl            $curl,
         Json            $json,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        TokenManager    $tokenManager
     )
     {
         $this->config = $config;
         $this->curl = $curl;
         $this->json = $json;
         $this->logger = $logger;
+        $this->tokenManager = $tokenManager;
     }
 
     /**
@@ -58,14 +61,23 @@ class Client
      *
      * @param int $page
      * @param int $limit
+     * @param string|null $searchTerm
      * @return array
      */
-    public function getProducts($page = 1, $limit = 20)
+    public function getProducts($page = 1, $limit = 10, $searchTerm = null)
     {
-        return $this->sendRequest('GET', '/product/list', [
+        $limit = max(10, $limit);
+
+        $params = [
             'pageNum' => $page,
             'pageSize' => $limit
-        ]);
+        ];
+
+        if ($searchTerm) {
+            $params['productNameEn'] = $searchTerm;
+        }
+
+        return $this->sendRequest('GET', '/product/list', $params);
     }
 
     /**
@@ -76,7 +88,7 @@ class Client
      */
     public function getProductDetails($pid)
     {
-        return $this->sendRequest('GET', '/product/query', [
+        return $this->sendRequest('GET', '/product/detail', [
             'pid' => $pid
         ]);
     }
@@ -138,60 +150,109 @@ class Client
      * @param string $endpoint
      * @param array $params
      * @param array $data
+     * @param int $retryCount
      * @return array
      */
-    protected function sendRequest($method, $endpoint, $params = [], $data = [])
+    protected function sendRequest($method, $endpoint, $params = [], $data = [], $retryCount = 0)
     {
         if (!$this->config->isEnabled()) {
             return ['error' => 'Module is disabled'];
         }
 
+        // Maximum de tentatives
+        if ($retryCount > 2) {
+            return ['error' => 'Nombre maximum de tentatives atteint'];
+        }
+
         $apiUrl = rtrim($this->config->getApiUrl(), '/');
         $url = $apiUrl . $endpoint;
 
-        // Add query parameters if present
+        // Ajouter les paramètres de requête si présents
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
 
-        // Set headers
+        // Réinitialiser les en-têtes pour éviter les doublons
+        $this->curl->setHeaders([]);
+
+        // Définir les en-têtes
         $this->curl->addHeader('Content-Type', 'application/json');
         $this->curl->addHeader('Accept', 'application/json');
 
-        // Add authentication
-        $apiKey = $this->config->getApiKey();
-        if ($apiKey) {
-            $this->curl->addHeader('Authorization', 'Bearer ' . $apiKey);
+        // Obtenir et ajouter le token d'accès
+        $accessToken = $this->tokenManager->getAccessToken();
+        if (!$accessToken) {
+            // Si nous ne pouvons pas obtenir de token, vérifier les informations de throttling
+            $throttleInfo = $this->tokenManager->getAuthThrottleInfo();
+            if (!$throttleInfo['canAuthenticate']) {
+                return [
+                    'error' => 'Limitation des requêtes API: veuillez attendre ' .
+                        $throttleInfo['waitTime'] . ' secondes avant de réessayer.',
+                    'canRetry' => false
+                ];
+            }
+
+            return [
+                'error' => 'Impossible d\'obtenir un token d\'accès. Veuillez vérifier votre clé API et votre email.',
+                'canRetry' => false
+            ];
         }
 
+        $this->curl->addHeader('CJ-Access-Token', $accessToken);
+
         try {
-            // Send request
+            // Journaliser la requête pour le débogage
+            $this->logger->debug('CJ Dropshipping API Request', [
+                'url' => $url,
+                'method' => $method,
+                'params' => $params
+            ]);
+
+            // Envoyer la requête
             if ($method === 'GET') {
                 $this->curl->get($url);
             } elseif ($method === 'POST') {
                 $this->curl->post($url, $this->json->serialize($data));
-            } elseif ($method === 'PUT') {
-                $this->curl->put($url, $this->json->serialize($data));
             } elseif ($method === 'DELETE') {
                 $this->curl->delete($url);
             }
 
-            // Get response
+            // Obtenir la réponse
             $response = $this->curl->getBody();
+            $statusCode = $this->curl->getStatus();
 
-            // Log for debugging
+            // Journaliser la réponse pour le débogage
             $this->logger->debug('CJ Dropshipping API Response', [
                 'url' => $url,
                 'method' => $method,
+                'status_code' => $statusCode,
                 'response' => $response
             ]);
 
-            return $this->json->unserialize($response);
+            $parsedResponse = $this->json->unserialize($response);
+
+            // Vérifier si le token a expiré
+            if (isset($parsedResponse['code']) && in_array($parsedResponse['code'], [401, 1600300, 1600400])) {
+                // Token expiré ou invalide, effacer le cache et essayer à nouveau
+                $this->tokenManager->clearTokenCache();
+                return $this->sendRequest($method, $endpoint, $params, $data, $retryCount + 1);
+            }
+
+            // Vérifier si nous avons atteint la limite de requêtes
+            if (isset($parsedResponse['code']) && $parsedResponse['code'] == 1600200) {
+                // Limitation de requêtes, attendre et réessayer (pour les requêtes non d'authentification)
+                if ($endpoint !== '/authentication/getAccessToken' && $retryCount < 2) {
+                    sleep(5); // Attendre 5 secondes
+                    return $this->sendRequest($method, $endpoint, $params, $data, $retryCount + 1);
+                }
+            }
+
+            return $parsedResponse;
         } catch (\Exception $e) {
             $this->logger->error('CJ Dropshipping API Error: ' . $e->getMessage(), [
                 'url' => $url,
                 'method' => $method,
-                'exception' => $e
+                'exception' => $e->getTraceAsString()
             ]);
 
             return ['error' => $e->getMessage()];

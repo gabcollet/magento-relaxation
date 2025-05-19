@@ -85,7 +85,6 @@ class GetVariants extends Action
                 'pid' => $pid
             ]);
 
-            // Appel à l'API CJ Dropshipping pour récupérer les variantes du produit
             $response = $this->apiClient->getProductVariants($pid);
 
             if (isset($response['data']) && is_array($response['data'])) {
@@ -94,7 +93,8 @@ class GetVariants extends Action
                     'variants' => $response['data']
                 ]);
             } else {
-                $error = isset($response['error']) ? $response['error'] : __('Could not retrieve product variants.');
+                $error = isset($response['error']) ? $response['error'] :
+                    (isset($response['message']) ? $response['message'] : __('Could not retrieve product variants.'));
                 return $result->setData([
                     'success' => false,
                     'message' => $error,

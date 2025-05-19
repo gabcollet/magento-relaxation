@@ -1,0 +1,25 @@
+.dropshipping-api-info {
+    background-color: #f8f8f8;
+    border-left: 3px solid #6366F1;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.dropshipping-api-info ul {
+    margin-left: 20px;
+    margin-bottom: 0;
+}
+
+.dropshipping-api-info li {
+    margin-bottom: 8px;
+}
+
+.dropshipping-api-info a {
+    color: #6366F1;
+    text-decoration: underline;
+}
+
+.dropshipping-api-info strong {
+    font-weight: 600;
+}

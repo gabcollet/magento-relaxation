@@ -83,22 +83,8 @@ class Search extends Action
                 'limit' => $limit
             ]);
 
-            // Appel à l'API CJ Dropshipping pour rechercher des produits
-            $searchParams = [
-                'pageNum' => $page,
-                'pageSize' => $limit
-            ];
-
-            if (!empty($searchTerm)) {
-                $searchParams['productNameEn'] = $searchTerm;
-            }
-
-            if (!empty($categories)) {
-                // Vous devrez peut-être adapter ceci à la façon dont CJ Dropshipping gère les catégories
-                $searchParams['categoryName'] = implode(',', $categories);
-            }
-
-            $response = $this->apiClient->getProducts($page, $limit);
+            // Appel à l'API CJ Dropshipping modifié pour utiliser le nouveau système de token
+            $response = $this->apiClient->getProducts($page, $limit, $searchTerm);
 
             if (isset($response['data']) && isset($response['data']['list'])) {
                 return $result->setData([
@@ -109,7 +95,8 @@ class Search extends Action
                     'limit' => $limit
                 ]);
             } else {
-                $error = isset($response['error']) ? $response['error'] : __('No products found or API returned unexpected data format.');
+                $error = isset($response['error']) ? $response['error'] :
+                    (isset($response['message']) ? $response['message'] : __('No products found or API returned unexpected data format.'));
                 return $result->setData([
                     'success' => false,
                     'message' => $error,

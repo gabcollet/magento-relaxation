@@ -85,7 +85,6 @@ class Details extends Action
                 'pid' => $pid
             ]);
 
-            // Appel à l'API CJ Dropshipping pour récupérer les détails du produit
             $response = $this->apiClient->getProductDetails($pid);
 
             if (isset($response['data'])) {
@@ -94,7 +93,8 @@ class Details extends Action
                     'product' => $response['data']
                 ]);
             } else {
-                $error = isset($response['error']) ? $response['error'] : __('Could not retrieve product details.');
+                $error = isset($response['error']) ? $response['error'] :
+                    (isset($response['message']) ? $response['message'] : __('Could not retrieve product details.'));
                 return $result->setData([
                     'success' => false,
                     'message' => $error,
