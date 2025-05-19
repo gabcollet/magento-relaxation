@@ -69,7 +69,7 @@ class TestButton extends Field
             [
                 'id' => 'test_api_connection_button',
                 'label' => __('Test Connection'),
-                'class' => 'primary'
+                'class' => 'action-primary'
             ]
         );
 

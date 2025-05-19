@@ -67,6 +67,7 @@ class TestConnection extends Action
 
         try {
             $params = $this->getRequest()->getParams();
+            $this->logger->debug('Test connection params', $params);
 
             // Vérifier que les paramètres nécessaires sont présents
             if (!isset($params['api_key']) || !isset($params['api_url'])) {
@@ -79,8 +80,8 @@ class TestConnection extends Action
             $apiKey = $params['api_key'];
             $apiUrl = rtrim($params['api_url'], '/');
 
-            // Endpoint pour tester la connexion
-            $endpoint = $apiUrl . '/product/categories';
+            // Endpoint pour tester la connexion - utilisez un endpoint simple qui existe
+            $endpoint = $apiUrl . '/product/list';
 
             // Configurer les en-têtes de la requête
             $this->curl->addHeader('Content-Type', 'application/json');
@@ -92,37 +93,22 @@ class TestConnection extends Action
 
             // Vérifier le code de statut HTTP
             $statusCode = $this->curl->getStatus();
+            $this->logger->debug('API Response Status Code', ['status' => $statusCode]);
 
             if ($statusCode == 200) {
                 // La connexion a réussi
                 $responseBody = $this->curl->getBody();
-                $responseData = $this->json->unserialize($responseBody);
+                $this->logger->debug('API Response Body', ['body' => $responseBody]);
 
-                // Vérifier la structure de la réponse
-                if (isset($responseData['data']) && is_array($responseData['data'])) {
-                    return $result->setData([
-                        'success' => true,
-                        'message' => __('API connection successful! Found %1 categories.', count($responseData['data']))
-                    ]);
-                } else {
-                    return $result->setData([
-                        'success' => true,
-                        'message' => __('API connection successful, but could not parse categories.')
-                    ]);
-                }
+                return $result->setData([
+                    'success' => true,
+                    'message' => __('API connection successful! The endpoint responded with status code 200.')
+                ]);
             } else {
                 // La connexion a échoué
                 $responseBody = $this->curl->getBody();
                 $error = __('API connection failed. Status code: %1', $statusCode);
-
-                try {
-                    $responseData = $this->json->unserialize($responseBody);
-                    if (isset($responseData['message'])) {
-                        $error .= '. ' . $responseData['message'];
-                    }
-                } catch (\Exception $e) {
-                    // Ignorer les erreurs de parsing JSON
-                }
+                $this->logger->debug('API Error Response', ['body' => $responseBody]);
 
                 return $result->setData([
                     'success' => false,

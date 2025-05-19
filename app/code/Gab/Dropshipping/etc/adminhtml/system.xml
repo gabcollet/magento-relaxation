@@ -22,7 +22,7 @@
                     <label>API URL</label>
                     <comment>Default: https://developers.cjdropshipping.com/api</comment>
                 </field>
-                <field id="test_connection" translate="label" type="button" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                <field id="test_connection" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Test API Connection</label>
                     <frontend_model>Gab\Dropshipping\Block\Adminhtml\System\Config\TestButton</frontend_model>
                     <comment>Click to test the connection with CJ Dropshipping API</comment>

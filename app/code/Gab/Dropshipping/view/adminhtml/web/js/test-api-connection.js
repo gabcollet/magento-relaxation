@@ -9,13 +9,16 @@ define([
         var apiKeyInput = $('#dropshipping_general_api_key');
         var apiUrlInput = $('#dropshipping_general_api_url');
         var resultContainer = $('#test-api-connection-result');
+        var button = $('#test_api_connection_button');
 
-        $(this).click(function () {
-            // Récupérer les valeurs actuelles des champs de configuration
+        button.on('click', function (e) {
+            e.preventDefault();
+
+            // Get the current values from the fields
             var apiKey = apiKeyInput.val();
             var apiUrl = apiUrlInput.val();
 
-            // Vérifier que les champs sont remplis
+            // Verify both fields are filled
             if (!apiKey || !apiUrl) {
                 alert({
                     title: $t('Error'),
@@ -24,14 +27,14 @@ define([
                 return;
             }
 
-            // Afficher un message de chargement
+            // Show loading message
             resultContainer.show().html(
                 '<div class="message message-notice">' +
                 '<span>' + $t('Testing API connection, please wait...') + '</span>' +
                 '</div>'
             );
 
-            // Envoyer la requête AJAX
+            // Send AJAX request
             $.ajax({
                 url: config.ajaxUrl,
                 type: 'POST',
@@ -56,12 +59,13 @@ define([
                         );
                     }
                 },
-                error: function () {
+                error: function (xhr, status, error) {
                     resultContainer.html(
                         '<div class="message message-error error">' +
-                        '<span>' + $t('An error occurred during the test.') + '</span>' +
+                        '<span>' + $t('An error occurred during the test. Details: ') + error + '</span>' +
                         '</div>'
                     );
+                    console.error('AJAX Error:', error, xhr.responseText);
                 }
             });
         });
