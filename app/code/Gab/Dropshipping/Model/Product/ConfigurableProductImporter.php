@@ -361,7 +361,9 @@ class ConfigurableProductImporter
             $parentProduct->setCanSaveConfigurableAttributes(true);
 
             // Sauvegarder le produit parent
-            $this->productRepository->save($parentProduct);
+            // Not working https://github.com/magento/magento2/issues/33937
+//            $this->productRepository->save($parentProduct);
+            $parentProduct->save();
 
             $this->logger->info('Products associated successfully', [
                 'parent_id' => $parentProduct->getId(),
