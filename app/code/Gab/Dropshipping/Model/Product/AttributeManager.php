@@ -84,7 +84,7 @@ class AttributeManager
     public function detectConfigurableAttributes($variants)
     {
         $configurableAttributes = [];
-        $ignoredAttributes = ['vid', 'variantSku', 'variantImage', 'variantSellPrice', 'variantStock'];
+        $ignoredAttributes = ['vid', 'variantSku', 'variantImage', 'variantSellPrice', 'variantStock', 'variantSugSellPrice'];
 
         // Parcourir toutes les variantes pour détecter les attributs configurables
         foreach ($variants as $variant) {
@@ -186,28 +186,30 @@ class AttributeManager
                 }
             }
 
-            // Ajouter les options manquantes
-            $newOptions = [];
-            foreach ($options as $option) {
-                if (!isset($optionsMap[$option])) {
-                    $newOptions['option']['value'][$option][0] = $option;
-                }
-            }
+            // Recharge l'attribut pour récupérer les options mises à jour
+            $attribute = $this->attributeRepository->get(
+                \Magento\Catalog\Model\Product::ENTITY,
+                $code
+            );
 
-            if (!empty($newOptions)) {
-                $attribute->setData('option', $newOptions);
-                $this->attributeRepository->save($attribute);
-
-                // Récupérer à nouveau les options après l'ajout
+            $finalOptions = [];
+            if ($attribute->usesSource()) {
                 $attributeOptions = $attribute->getSource()->getAllOptions();
                 foreach ($attributeOptions as $option) {
-                    $optionsMap[$option['label']] = $option['value'];
+                    if (!empty($option['value']) && $option['value'] !== '') {
+                        $finalOptions[] = [
+                            'label' => $option['label'],
+                            'value_index' => $option['value'],
+                        ];
+                    }
                 }
             }
 
             return [
-                'attribute_id' => $attributeId,
-                'options' => $optionsMap
+                'attribute_id' => $attribute->getAttributeId(),
+                'code' => $attribute->getAttributeCode(),
+                'label' => $attribute->getDefaultFrontendLabel(),
+                'options' => $finalOptions
             ];
         } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
             // L'attribut n'existe pas, le créer
@@ -361,11 +363,18 @@ class AttributeManager
             }
         }
 
-        // Important : Log des attributs pour débogage
-        $this->logger->debug('Configurable attributes data:', [
-            'data' => json_encode($attributesData)
-        ]);
-
         return $attributesData;
     }
+
+    public function indexAttributeOptionsByLabel(array $options): array
+    {
+        $indexed = [];
+        foreach ($options as $option) {
+            if (isset($option['label'], $option['value_index'])) {
+                $indexed[strtolower($option['label'])] = $option['value_index'];
+            }
+        }
+        return $indexed;
+    }
+
 }

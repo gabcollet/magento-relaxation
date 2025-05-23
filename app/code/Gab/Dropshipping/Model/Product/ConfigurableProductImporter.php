@@ -112,7 +112,8 @@ class ConfigurableProductImporter
                 $attributeData = $this->attributeManager->createOrGetConfigurableAttribute($code, array_values($values));
                 $attributeMap[$attributeData['attribute_id']] = [
                     'code' => $code,
-                    'options' => $attributeData['options']
+                    'options' => $attributeData['options'],
+                    'indexed_options' => $this->attributeManager->indexAttributeOptionsByLabel($attributeData['options'])
                 ];
             }
 
@@ -264,16 +265,25 @@ class ConfigurableProductImporter
             $variantAttributes = [];
 
             foreach ($configAttributes as $code => $values) {
-                if (isset($variant[$code])) {
-                    $optionValue = $variant[$code];
-                    $valueKey = is_numeric($optionValue) ? (string)$optionValue : $optionValue;
+                $matchingKey = null;
+                foreach ($variant as $variantKey => $variantValue) {
+                    if (strtolower($variantKey) === strtolower($code)) {
+                        $matchingKey = $variantKey;
+                        break;
+                    }
+                }
 
-                    if (isset($values[$valueKey])) {
-                        foreach ($attributeMap as $attributeId => $attrData) {
-                            if ($attrData['code'] === $code) {
-                                $variantAttributes[$code] = $attrData['options'][$valueKey];
-                                break;
+                if ($matchingKey !== null) {
+                    $optionValue = $variant[$matchingKey];
+                    $valueKey = is_numeric($optionValue) ? (string)$optionValue : $optionValue;
+                    $valueKeyLower = strtolower($valueKey);
+
+                    foreach ($attributeMap as $attributeId => $attrData) {
+                        if (strtolower($attrData['code']) === strtolower($variantKey)) {
+                            if (isset($attrData['indexed_options'][$valueKeyLower])) {
+                                $variantAttributes[$code] = $attrData['indexed_options'][$valueKeyLower];
                             }
+                            break;
                         }
                     }
                 }
