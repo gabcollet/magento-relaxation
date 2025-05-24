@@ -108,15 +108,26 @@ class ImportManager
      * @param array $categoryIds
      * @return array
      */
-    public function importConfigurableProduct($productData, $variants, $pid, $markup, $stockQty, $categoryIds)
+    public function importConfigurableProduct($productData, $variants, $pid, $markup, $stockQty, $categoryIds, $selectedAttributes = [])
     {
         try {
-            return $this->configurableProductImporter->import($productData, $variants, $pid, $markup, $stockQty, $categoryIds);
-        } catch (\Exception $e) {
-            $this->logger->error('Error in configurable product import: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
+            $product = $this->configurableProductImporter->import(
+                $productData,
+                $variants,
+                $pid,
+                $markup,
+                $stockQty,
+                $categoryIds,
+                $selectedAttributes
+            );
 
+            return [
+                'success' => true,
+                'message' => __('Configurable product has been imported successfully.'),
+                'productId' => $product['productId'] ?? null,
+                'sku' => $product['sku'] ?? null
+            ];
+        } catch (\Exception $e) {
             return [
                 'success' => false,
                 'message' => __('Error importing configurable product: %1', $e->getMessage())

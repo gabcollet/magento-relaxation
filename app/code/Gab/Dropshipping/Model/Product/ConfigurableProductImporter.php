@@ -81,40 +81,36 @@ class ConfigurableProductImporter
      * @param array $categoryIds
      * @return array
      */
-    public function import($productData, $variants, $pid, $markup, $stockQty, $categoryIds)
+    public function import($productData, $variants, $pid, $markup, $stockQty, $categoryIds, $selectedAttributes = [])
     {
         try {
-            // Journaliser les données des variantes pour débogage
-            $this->logger->debug('Variantes à traiter', [
-                'count' => count($variants),
-                'first_variant' => isset($variants[0]) ? json_encode($variants[0]) : 'none'
-            ]);
-
             // 1. Analyser les variantes pour déterminer les attributs configurables
-            $configAttributes = $this->attributeManager->detectConfigurableAttributes($variants);
+            if (!empty($selectedAttributes)) {
+                $attributeMap = $this->attributeManager->createSelectedConfigurableAttributes($selectedAttributes, $variants);
+                $configAttributes = []; // Pas besoin pour les attributs sélectionnés
+            } else {
+                // Fallback à l'ancienne méthode
+                $configAttributes = $this->attributeManager->detectConfigurableAttributes($variants);
+                if (empty($configAttributes)) {
+                    // Import en tant que produit simple
+                    $simpleProduct = $this->simpleProductImporter->import($productData, $pid, $markup, $stockQty, $categoryIds);
+                    return [
+                        'success' => true,
+                        'message' => __('No configurable attributes detected. Product imported as simple product.'),
+                        'productId' => $simpleProduct->getId(),
+                        'sku' => $simpleProduct->getSku()
+                    ];
+                }
 
-            if (empty($configAttributes)) {
-                // Si aucun attribut configurable n'est détecté, créer un produit simple
-                $this->logger->info('Aucun attribut configurable détecté. Import en tant que produit simple.');
-                $simpleProduct = $this->simpleProductImporter->import($productData, $pid, $markup, $stockQty, $categoryIds);
-
-                return [
-                    'success' => true,
-                    'message' => __('No configurable attributes detected. Product imported as simple product.'),
-                    'productId' => $simpleProduct->getId(),
-                    'sku' => $simpleProduct->getSku()
-                ];
-            }
-
-            // 2. Créer ou récupérer les attributs configurables
-            $attributeMap = [];
-            foreach ($configAttributes as $code => $values) {
-                $attributeData = $this->attributeManager->createOrGetConfigurableAttribute($code, array_values($values));
-                $attributeMap[$attributeData['attribute_id']] = [
-                    'code' => $code,
-                    'options' => $attributeData['options'],
-                    'indexed_options' => $this->attributeManager->indexAttributeOptionsByLabel($attributeData['options'])
-                ];
+                $attributeMap = [];
+                foreach ($configAttributes as $code => $values) {
+                    $attributeData = $this->attributeManager->createOrGetConfigurableAttribute($code, array_values($values));
+                    $attributeMap[$attributeData['attribute_id']] = [
+                        'code' => $code,
+                        'options' => $attributeData['options'],
+                        'indexed_options' => $this->attributeManager->indexAttributeOptionsByLabel($attributeData['options'])
+                    ];
+                }
             }
 
             // 3. Créer le produit parent configurable
@@ -252,16 +248,13 @@ class ConfigurableProductImporter
             $variantData = [];
             $variantData['name'] = $productData['productNameEn'] ?? 'CJ Product';
 
-            // Générer le SKU pour la variante
             $variantSku = $parentSku . '-' . $variant['vid'];
             $variantData['sku'] = $variantSku;
 
-            // Définir le prix avec la marge
             $variantPrice = isset($variant['variantSellPrice']) ? (float)$variant['variantSellPrice'] : (float)$productData['sellPrice'];
             $variantFinalPrice = $variantPrice * (1 + $markup);
             $variantData['price'] = $variantFinalPrice;
 
-            // Définir les attributs configurables pour cette variante
             $variantAttributes = [];
 
             foreach ($configAttributes as $code => $values) {
@@ -289,7 +282,6 @@ class ConfigurableProductImporter
                 }
             }
 
-            // Définir le stock pour la variante
             $variantStockQty = isset($variant['variantStock']) ? (int)$variant['variantStock'] : $stockQty;
             $variantData['stock_data'] = [
                 'use_config_manage_stock' => 1,
@@ -298,21 +290,19 @@ class ConfigurableProductImporter
                 'qty' => $variantStockQty
             ];
 
-            // Créer le produit variante
             $childProduct = $this->simpleProductImporter->createVariant($variantData, $variantAttributes, $categoryIds);
             $childProduct->setCustomAttribute('dropship_pid', str_replace('CJ-', '', $parentSku));
             $childProduct->setCustomAttribute('dropship_source', 'CJ');
             $childProduct->setCustomAttribute('dropship_variant_id', $variant['vid']);
 
-            // Ajouter des images pour la variante si disponibles
+            $childProduct = $this->productRepository->save($childProduct);
+
             if (isset($variant['variantImage']) && !empty($variant['variantImage'])) {
                 $this->imageHandler->addProductImageFromUrl($childProduct, $variant['variantImage']);
             } else {
-                // Si pas d'image spécifique à la variante, utiliser les images du produit parent
                 $this->imageHandler->addProductImages($childProduct, $productData);
             }
 
-            // Enregistrer le produit variante
             $childProduct = $this->productRepository->save($childProduct);
             $childProducts[] = $childProduct;
         }
@@ -331,13 +321,11 @@ class ConfigurableProductImporter
     protected function associateProducts($parentProduct, $childProducts, $attributeIds)
     {
         try {
-            // Récupérer les IDs des produits enfants
             $childProductIds = [];
             foreach ($childProducts as $childProduct) {
                 $childProductIds[] = $childProduct->getId();
             }
 
-            // Préparer les données des attributs configurables
             $attributesData = $this->attributeManager->getConfigurableAttributesData($attributeIds);
 
             if (empty($attributesData)) {
@@ -345,22 +333,17 @@ class ConfigurableProductImporter
                 return;
             }
 
-            // Utiliser directement l'objet Configurable pour associer les produits
             $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
             $configurableType = $objectManager->create(\Magento\ConfigurableProduct\Model\Product\Type\Configurable::class);
 
-            // Définir les attributs configurables
             $parentProduct->getTypeInstance()->setUsedProductAttributeIds($attributeIds, $parentProduct);
 
-            // Définir les options configurables
             $configurableAttributesData = $parentProduct->getTypeInstance()->getConfigurableAttributesAsArray($parentProduct);
             $parentProduct->setConfigurableAttributesData($configurableAttributesData);
 
-            // Définir les produits associés
             $parentProduct->setAssociatedProductIds($childProductIds);
             $parentProduct->setCanSaveConfigurableAttributes(true);
 
-            // Sauvegarder le produit parent
             // Not working https://github.com/magento/magento2/issues/33937
 //            $this->productRepository->save($parentProduct);
             $parentProduct->save();

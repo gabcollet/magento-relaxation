@@ -18,87 +18,50 @@ define([
             var paginationContainer = $('.pagination-container');
             var importForm = $('#import-configuration-form');
             var importFormOverlay = $('#import-form-overlay');
-            var closeFormBtn = $('#close-import-form');
-            var cancelImportBtn = $('#cancel-import');
-            var confirmImportBtn = $('#confirm-import');
             var currentPage = 1;
             var totalPages = 1;
             var itemsPerPage = 20;
             var currentProductPid = null;
             var currentProductData = null;
 
-            // Search products when the search button is clicked
-            searchBtn.on('click', function() {
-                searchProducts(1);
-            });
+            initEventListeners();
 
-            // Also search when Enter key is pressed in the search field
-            searchTerm.on('keypress', function(e) {
-                if (e.which === 13) {
-                    searchBtn.trigger('click');
-                    return false;
-                }
-            });
+            function initEventListeners() {
+                searchBtn.on('click', function() {
+                    searchProducts(1);
+                });
 
-            // Close import form when close button is clicked
-            closeFormBtn.on('click', function() {
-                hideImportForm();
-            });
+                searchTerm.on('keypress', function(e) {
+                    if (e.which === 13) {
+                        searchBtn.trigger('click');
+                        return false;
+                    }
+                });
 
-            // Close import form when cancel button is clicked
-            cancelImportBtn.on('click', function() {
-                hideImportForm();
-            });
+                $('#close-import-form, #cancel-import').on('click', hideImportForm);
+                importFormOverlay.on('click', hideImportForm);
+                $('#confirm-import').on('click', importProduct);
 
-            // Close import form when clicking on overlay
-            importFormOverlay.on('click', function() {
-                hideImportForm();
-            });
-
-            // Import product when confirm button is clicked
-            confirmImportBtn.on('click', function() {
-                importProduct();
-            });
-
-            // Function to show import form
-            function showImportForm(pid, productData) {
-                currentProductPid = pid;
-                currentProductData = productData;
-
-                // Set product preview
-                $('#product-preview-image').attr('src', productData.productImage || config.placeholderImage);
-                $('#product-preview-name').text(productData.productNameEn || 'No Name');
-
-                // Show form and overlay
-                importFormOverlay.addClass('active');
-                importForm.addClass('active');
+                $('#import-type').on('change', function() {
+                    if ($(this).val() === 'configurable') {
+                        $('.configurable-info').show();
+                    } else {
+                        $('.configurable-info').hide();
+                    }
+                });
             }
 
-            // Function to hide import form
-            function hideImportForm() {
-                importFormOverlay.removeClass('active');
-                importForm.removeClass('active');
-                currentProductPid = null;
-                currentProductData = null;
-            }
-
-            // Function to handle product search
             function searchProducts(page) {
-                // Collect selected categories
                 var categories = [];
                 $('input[name="categories[]"]:checked').each(function() {
                     categories.push($(this).val());
                 });
 
-                // Show loading message
                 noResultsMessage.hide();
                 resultsContainer.hide();
                 loadingMessage.insertAfter(noResultsMessage);
-
-                // Disable search button to prevent multiple requests
                 searchBtn.prop('disabled', true).addClass('disabled');
 
-                // Make AJAX request
                 $.ajax({
                     url: config.searchUrl,
                     type: 'GET',
@@ -110,101 +73,9 @@ define([
                         limit: itemsPerPage,
                         form_key: window.FORM_KEY
                     },
-                    success: function(response) {
-                        loadingMessage.remove();
-
-                        // Vérifier si l'erreur est liée à une limitation de taux
-                        if (!response.success && response.message && response.message.indexOf('Limitation des requêtes API') !== -1) {
-                            // Extraire le temps d'attente de l'erreur
-                            var waitTime = response.message.match(/attendre\s+(\d+)\s+secondes/);
-                            if (waitTime && waitTime[1]) {
-                                var seconds = parseInt(waitTime[1]);
-                                var timerElement = $('<div class="rate-limit-timer">Réessayer dans <span>' + seconds + '</span> secondes</div>');
-                                noResultsMessage.html(response.message + '<br>')
-                                    .append(timerElement)
-                                    .addClass('message-warning')
-                                    .show();
-
-                                // Démarrer un compte à rebours
-                                var timer = setInterval(function() {
-                                    seconds--;
-                                    timerElement.find('span').text(seconds);
-                                    if (seconds <= 0) {
-                                        clearInterval(timer);
-                                        timerElement.text('Vous pouvez maintenant réessayer.');
-
-                                        // Activer le bouton de recherche
-                                        searchBtn.prop('disabled', false).removeClass('disabled');
-
-                                        // Changer le style du message
-                                        noResultsMessage.removeClass('message-warning').addClass('message-info');
-                                    }
-                                }, 1000);
-                            } else {
-                                noResultsMessage.text(response.message).addClass('message-warning').show();
-
-                                // Réactiver le bouton après 3 secondes
-                                setTimeout(function() {
-                                    searchBtn.prop('disabled', false).removeClass('disabled');
-                                }, 3000);
-                            }
-                            resultsContainer.hide();
-                            return;
-                        }
-
-                        // Réactiver le bouton de recherche
-                        searchBtn.prop('disabled', false).removeClass('disabled');
-
-                        if (response.success && response.products && response.products.length > 0) {
-                            // Render products
-                            renderProducts(response.products);
-
-                            // Update pagination
-                            currentPage = response.page || 1;
-                            totalPages = Math.ceil((response.totalCount || 0) / itemsPerPage);
-                            renderPagination();
-
-                            resultsContainer.show();
-                            noResultsMessage.hide();
-
-                            // Scroll to results
-                            $('html, body').animate({
-                                scrollTop: resultsContainer.offset().top - 50
-                            }, 500);
-                        } else {
-                            // Show no results message
-                            noResultsMessage.text(response.message || $t('No products found. Please try different search terms.'))
-                                .removeClass('message-warning message-info')
-                                .addClass('message-notice')
-                                .show();
-                            resultsContainer.hide();
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        loadingMessage.remove();
-
-                        // Réactiver le bouton de recherche
-                        searchBtn.prop('disabled', false).removeClass('disabled');
-
-                        // Afficher un message d'erreur
-                        var errorMessage = '';
-
-                        try {
-                            var response = JSON.parse(xhr.responseText);
-                            errorMessage = response.message || $t('An error occurred during the search. Please try again.');
-                        } catch (e) {
-                            errorMessage = $t('An error occurred during the search. Please try again.');
-                        }
-
-                        noResultsMessage.text(errorMessage)
-                            .removeClass('message-warning message-info')
-                            .addClass('message-error')
-                            .show();
-                        resultsContainer.hide();
-                        console.error('AJAX Error:', error);
-                    },
+                    success: handleSearchSuccess,
+                    error: handleSearchError,
                     complete: function() {
-                        // S'assurer que le bouton de recherche est réactivé en cas de problème inattendu
                         if (searchBtn.prop('disabled')) {
                             setTimeout(function() {
                                 searchBtn.prop('disabled', false).removeClass('disabled');
@@ -214,70 +85,138 @@ define([
                 });
             }
 
-            // Function to render products
+            function handleSearchSuccess(response) {
+                loadingMessage.remove();
+
+                if (!response.success && response.message && response.message.indexOf('Limitation des requêtes API') !== -1) {
+                    handleRateLimit(response);
+                    return;
+                }
+
+                searchBtn.prop('disabled', false).removeClass('disabled');
+
+                if (response.success && response.products && response.products.length > 0) {
+                    renderProducts(response.products);
+                    currentPage = response.page || 1;
+                    totalPages = Math.ceil((response.totalCount || 0) / itemsPerPage);
+                    renderPagination();
+                    resultsContainer.show();
+                    noResultsMessage.hide();
+
+                    $('html, body').animate({
+                        scrollTop: resultsContainer.offset().top - 50
+                    }, 500);
+                } else {
+                    noResultsMessage.text(response.message || $t('No products found.'))
+                        .removeClass('message-warning message-info')
+                        .addClass('message-notice')
+                        .show();
+                    resultsContainer.hide();
+                }
+            }
+
+            function handleSearchError(xhr, status, error) {
+                loadingMessage.remove();
+                searchBtn.prop('disabled', false).removeClass('disabled');
+
+                var errorMessage = $t('An error occurred during the search. Please try again.');
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMessage = response.message || errorMessage;
+                } catch (e) {}
+
+                noResultsMessage.text(errorMessage)
+                    .removeClass('message-warning message-info')
+                    .addClass('message-error')
+                    .show();
+                resultsContainer.hide();
+            }
+
+            function handleRateLimit(response) {
+                var waitTime = response.message.match(/attendre\s+(\d+)\s+secondes/);
+                if (waitTime && waitTime[1]) {
+                    var seconds = parseInt(waitTime[1]);
+                    var timerElement = $('<div class="rate-limit-timer">Réessayer dans <span>' + seconds + '</span> secondes</div>');
+                    noResultsMessage.html(response.message + '<br>')
+                        .append(timerElement)
+                        .addClass('message-warning')
+                        .show();
+
+                    var timer = setInterval(function() {
+                        seconds--;
+                        timerElement.find('span').text(seconds);
+                        if (seconds <= 0) {
+                            clearInterval(timer);
+                            timerElement.text('Vous pouvez maintenant réessayer.');
+                            searchBtn.prop('disabled', false).removeClass('disabled');
+                            noResultsMessage.removeClass('message-warning').addClass('message-info');
+                        }
+                    }, 1000);
+                } else {
+                    noResultsMessage.text(response.message).addClass('message-warning').show();
+                    setTimeout(function() {
+                        searchBtn.prop('disabled', false).removeClass('disabled');
+                    }, 3000);
+                }
+                resultsContainer.hide();
+            }
+
             function renderProducts(products) {
                 productsGrid.empty();
 
                 $.each(products, function(index, product) {
-                    var productHtml =
-                        '<div class="product-item">' +
-                        '<div class="product-image">' +
-                        '<img src="' + (product.productImage || config.placeholderImage) + '" alt="' + $t('Product Image') + '" />' +
-                        '</div>' +
-                        '<div class="product-details">' +
-                        '<h4>' + (product.productNameEn || 'No Name') + '</h4>' +
-                        '<div class="product-info">' +
-                        '<div class="product-price">' +
-                        $t('Price') + ': $' + (product.sellPrice || '0.00') +
-                        '</div>' +
-                        '<div class="product-sku">' +
-                        $t('SKU') + ': ' + (product.productSku || 'N/A') +
-                        '</div>' +
-                        '</div>' +
-                        '<div class="product-actions">' +
-                        '<button type="button" class="action-secondary view-details" data-pid="' + (product.pid || '') + '">' +
-                        $t('View Details') +
-                        '</button>' +
-                        '<button type="button" class="action-primary import-product" data-pid="' + (product.pid || '') + '">' +
-                        $t('Import') +
-                        '</button>' +
-                        '</div>' +
-                        '</div>' +
-                        '</div>';
-
+                    var productHtml = buildProductHtml(product);
                     productsGrid.append(productHtml);
                 });
 
-                // Add event listeners to the newly created buttons
-                productsGrid.find('.view-details').on('click', function() {
-                    var pid = $(this).data('pid');
-                    viewProductDetails(pid);
-                });
+                bindProductEvents();
+            }
 
+            function buildProductHtml(product) {
+                return '<div class="product-item">' +
+                    '<div class="product-image">' +
+                    '<img src="' + (product.productImage || config.placeholderImage) + '" alt="' + $t('Product Image') + '" />' +
+                    '</div>' +
+                    '<div class="product-details">' +
+                    '<h4>' + (product.productNameEn || 'No Name') + '</h4>' +
+                    '<div class="product-info">' +
+                    '<div class="product-price">' + $t('Price') + ': $' + (product.sellPrice || '0.00') + '</div>' +
+                    '<div class="product-sku">' + $t('SKU') + ': ' + (product.productSku || 'N/A') + '</div>' +
+                    '</div>' +
+                    '<div class="product-actions">' +
+                    '<button type="button" class="action-secondary view-details" data-pid="' + (product.pid || '') + '">' +
+                    $t('View Details') + '</button>' +
+                    '<button type="button" class="action-primary import-product" data-pid="' + (product.pid || '') + '">' +
+                    $t('Import') + '</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+            }
+
+            function bindProductEvents() {
                 productsGrid.find('.import-product').on('click', function() {
                     var pid = $(this).data('pid');
                     getProductDataForImport(pid);
                 });
+
+                productsGrid.find('.import-product').on('click', function() {
+                    getProductDataForImport($(this).data('pid'));
+                });
             }
 
-            // Function to render pagination
             function renderPagination() {
                 paginationContainer.empty();
 
-                if (totalPages <= 1) {
-                    return;
-                }
+                if (totalPages <= 1) return;
 
                 var paginationHtml = '<div class="pages">';
 
-                // Previous button
                 if (currentPage > 1) {
                     paginationHtml += '<button class="page-prev" data-page="' + (currentPage - 1) + '">' + $t('Previous') + '</button>';
                 } else {
                     paginationHtml += '<button class="page-prev disabled">' + $t('Previous') + '</button>';
                 }
 
-                // Page numbers
                 var startPage = Math.max(1, currentPage - 2);
                 var endPage = Math.min(totalPages, startPage + 4);
 
@@ -303,7 +242,6 @@ define([
                     paginationHtml += '<button class="page-number" data-page="' + totalPages + '">' + totalPages + '</button>';
                 }
 
-                // Next button
                 if (currentPage < totalPages) {
                     paginationHtml += '<button class="page-next" data-page="' + (currentPage + 1) + '">' + $t('Next') + '</button>';
                 } else {
@@ -311,104 +249,20 @@ define([
                 }
 
                 paginationHtml += '</div>';
-
                 paginationContainer.html(paginationHtml);
 
-                // Add event listeners to pagination buttons
                 paginationContainer.find('.page-number, .page-prev:not(.disabled), .page-next:not(.disabled)').on('click', function() {
-                    var page = $(this).data('page');
-                    searchProducts(page);
+                    searchProducts($(this).data('page'));
                 });
             }
 
-            // Function to view product details
-            function viewProductDetails(pid) {
-                if (!pid) {
-                    return;
-                }
-
-                // Show loading message
-                var loadingModal = $('<div class="loading-overlay"><div class="loading-message">' + $t('Loading product details...') + '</div></div>');
-                $('body').append(loadingModal);
-
-                // Fetch product details
-                $.ajax({
-                    url: config.detailsUrl,
-                    type: 'GET',
-                    dataType: 'json',
-                    data: {
-                        pid: pid,
-                        form_key: window.FORM_KEY
-                    },
-                    success: function(response) {
-                        loadingModal.remove();
-
-                        if (response.success && response.product) {
-                            // Fetch variants if product has them
-                            fetchProductVariants(pid, response.product);
-                        } else {
-                            alert({
-                                title: $t('Error'),
-                                content: response.message || $t('Could not load product details. Please try again.')
-                            });
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        loadingModal.remove();
-                        alert({
-                            title: $t('Error'),
-                            content: $t('An error occurred while loading product details. Please try again.')
-                        });
-                        console.error('AJAX Error:', error);
-                    }
-                });
-            }
-
-            // Function to fetch product variants
-            function fetchProductVariants(pid, product) {
-                // Show loading message
-                var loadingModal = $('<div class="loading-overlay"><div class="loading-message">' + $t('Loading product variants...') + '</div></div>');
-                $('body').append(loadingModal);
-
-                // Fetch product variants
-                $.ajax({
-                    url: config.getVariantsUrl,
-                    type: 'GET',
-                    dataType: 'json',
-                    data: {
-                        pid: pid,
-                        form_key: window.FORM_KEY
-                    },
-                    success: function(response) {
-                        loadingModal.remove();
-
-                        if (response.success && response.variants) {
-                            showProductDetailsModal(product, response.variants);
-                        } else {
-                            // Show details without variants
-                            showProductDetailsModal(product, []);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        loadingModal.remove();
-                        // Show details without variants
-                        showProductDetailsModal(product, []);
-                        console.error('AJAX Error:', error);
-                    }
-                });
-            }
-
-            // Function to get product data for import
             function getProductDataForImport(pid) {
                 if (!pid) {
                     return;
                 }
 
-                // Show loading message
-                var loadingModal = $('<div class="loading-overlay"><div class="loading-message">' + $t('Loading product data...') + '</div></div>');
-                $('body').append(loadingModal);
+                var loadingModal = showLoadingModal($t('Loading product data...'));
 
-                // Fetch product details
                 $.ajax({
                     url: config.detailsUrl,
                     type: 'GET',
@@ -421,111 +275,134 @@ define([
                         loadingModal.remove();
 
                         if (response.success && response.product) {
-                            // Show import form with product data
-                            showImportForm(pid, response.product);
+                            var importType = $('#import-type').val();
+
+                            if (importType === 'configurable') {
+                                require(['Gab_Dropshipping/js/import-attribute-selection'], function(attributeSelector) {
+                                    attributeSelector.init(config);
+                                    attributeSelector.showModal(pid, response.product);
+                                });
+                            } else {
+                                showImportForm(pid, response.product);
+                            }
                         } else {
-                            alert({
-                                title: $t('Error'),
-                                content: response.message || $t('Could not load product data. Please try again.')
-                            });
+                            showAlert($t('Error'), response.message || $t('Could not load product data.'));
                         }
                     },
                     error: function(xhr, status, error) {
                         loadingModal.remove();
-                        alert({
-                            title: $t('Error'),
-                            content: $t('An error occurred while loading product data. Please try again.')
-                        });
-                        console.error('AJAX Error:', error);
+                        showAlert($t('Error'), $t('An error occurred while loading product data.'));
                     }
                 });
             }
 
-            // Function to display product details modal
+            function showImportForm(pid, productData) {
+                currentProductPid = pid;
+                currentProductData = productData;
+
+                $('#product-preview-image').attr('src', productData.productImage || config.placeholderImage);
+                $('#product-preview-name').text(productData.productNameEn || 'No Name');
+
+                importFormOverlay.addClass('active');
+                importForm.addClass('active');
+            }
+
+            function hideImportForm() {
+                importFormOverlay.removeClass('active');
+                importForm.removeClass('active');
+                currentProductPid = null;
+                currentProductData = null;
+            }
+
+            function importProduct() {
+                if (!currentProductPid || !currentProductData) return;
+
+                var loadingModal = showLoadingModal($t('Importing product...'));
+
+                $.ajax({
+                    url: config.importUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        pid: currentProductPid,
+                        import_type: $('#import-type').val(),
+                        markup_percentage: $('#markup-percentage').val(),
+                        stock_quantity: $('#stock-quantity').val(),
+                        category_ids: $('#category-ids').val(),
+                        form_key: window.FORM_KEY
+                    },
+                    success: function(response) {
+                        loadingModal.remove();
+                        hideImportForm();
+                        showAlert(
+                            response.success ? $t('Success') : $t('Error'),
+                            response.message || (response.success ? $t('Product imported successfully.') : $t('Import failed.'))
+                        );
+                    },
+                    error: function() {
+                        loadingModal.remove();
+                        hideImportForm();
+                        showAlert($t('Error'), $t('An error occurred during import.'));
+                    }
+                });
+            }
+
+            function viewProductDetails(pid) {
+                if (!pid) return;
+
+                var loadingModal = showLoadingModal($t('Loading product details...'));
+
+                $.ajax({
+                    url: config.detailsUrl,
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { pid: pid, form_key: window.FORM_KEY },
+                    success: function(response) {
+                        loadingModal.remove();
+                        if (response.success && response.product) {
+                            fetchProductVariants(pid, response.product);
+                        } else {
+                            showAlert($t('Error'), response.message || $t('Could not load product details.'));
+                        }
+                    },
+                    error: function() {
+                        loadingModal.remove();
+                        showAlert($t('Error'), $t('An error occurred while loading product details.'));
+                    }
+                });
+            }
+
+            function fetchProductVariants(pid, product) {
+                var loadingModal = showLoadingModal($t('Loading product variants...'));
+
+                $.ajax({
+                    url: config.getVariantsUrl,
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { pid: pid, form_key: window.FORM_KEY },
+                    success: function(response) {
+                        loadingModal.remove();
+                        showProductDetailsModal(product, response.success ? response.variants : []);
+                    },
+                    error: function() {
+                        loadingModal.remove();
+                        showProductDetailsModal(product, []);
+                    }
+                });
+            }
+
             function showProductDetailsModal(product, variants) {
-                var hasVariants = variants && variants.length > 0;
-
-                var variantsHtml = '';
-                if (hasVariants) {
-                    variantsHtml += '<div class="product-variants">';
-                    variantsHtml += '<h4>' + $t('Product Variants') + ' (' + variants.length + ')</h4>';
-
-                    $.each(variants, function(index, variant) {
-                        variantsHtml += '<div class="variant-item">';
-                        variantsHtml += '<div class="variant-header">';
-                        variantsHtml += '<div class="variant-name">' + (variant.propertyValueName || 'Variant ' + (index + 1)) + '</div>';
-                        variantsHtml += '<div class="variant-price">$' + (variant.variantSellPrice || '0.00') + '</div>';
-                        variantsHtml += '</div>';
-
-                        if (variant.variantImage) {
-                            variantsHtml += '<div class="variant-image"><img src="' + variant.variantImage + '" alt="' + $t('Variant Image') + '" /></div>';
-                        }
-
-                        variantsHtml += '<div class="variant-stock">' + $t('Stock') + ': ' + (variant.variantStock || '0') + '</div>';
-
-                        if (variant.variantSku) {
-                            variantsHtml += '<div class="variant-sku">' + $t('SKU') + ': ' + variant.variantSku + '</div>';
-                        }
-
-                        variantsHtml += '</div>';
-                    });
-
-                    variantsHtml += '</div>';
-                }
-
-                var modalContent =
-                    '<div class="product-detail-modal">' +
-                    '<div class="product-images">' +
-                    '<img src="' + (product.productImage || config.placeholderImage) + '" alt="' + $t('Product Image') + '" />' +
-                    '</div>' +
-                    '<div class="product-info">' +
-                    '<h2>' + (product.productNameEn || 'No Name') + '</h2>' +
-                    '<div class="product-detail">' +
-                    '<strong>' + $t('Price') + ':</strong> $' + (product.sellPrice || '0.00') +
-                    '</div>' +
-                    '<div class="product-detail">' +
-                    '<strong>' + $t('SKU') + ':</strong> ' + (product.productSku || 'N/A') +
-                    '</div>' +
-                    '<div class="product-detail">' +
-                    '<strong>' + $t('Stock') + ':</strong> ' + (product.stock || '0') +
-                    '</div>' +
-                    (product.packageWeight ? '<div class="product-detail">' +
-                        '<strong>' + $t('Weight') + ':</strong> ' + product.packageWeight + ' kg' +
-                        '</div>' : '') +
-                    (product.packageLength && product.packageWidth && product.packageHeight ?
-                        '<div class="product-detail">' +
-                        '<strong>' + $t('Dimensions') + ':</strong> ' +
-                        product.packageLength + ' x ' + product.packageWidth + ' x ' + product.packageHeight + ' cm' +
-                        '</div>' : '') +
-                    '<div class="product-description">' +
-                    '<strong>' + $t('Description') + ':</strong><br>' +
-                    (product.description || $t('No description available.')) +
-                    '</div>' +
-                    (hasVariants ? variantsHtml : '') +
-                    '<div class="modal-actions">' +
-                    '<button type="button" class="action-primary import-from-modal" data-pid="' + (product.pid || '') + '">' +
-                    $t('Import Product') +
-                    '</button>' +
-                    '</div>' +
-                    '</div>' +
-                    '</div>';
+                var modalContent = buildProductDetailsContent(product, variants);
 
                 alert({
                     title: $t('Product Details'),
                     content: modalContent,
-                    actions: {
-                        always: function() {
-                            // Nothing specific to do when modal is closed
-                        }
-                    },
                     buttons: [{
-                        text: $.mage.__('Close'),
+                        text: $t('Close'),
                         class: 'action-secondary',
-                        click: function () {
-                            this.closeModal();
-                        }
+                        click: function () { this.closeModal(); }
                     }, {
-                        text: $.mage.__('Import'),
+                        text: $t('Import'),
                         class: 'action-primary',
                         click: function () {
                             getProductDataForImport(product.pid);
@@ -533,73 +410,52 @@ define([
                         }
                     }]
                 });
-
-                // Add event listener to the import button in the modal
-                $('.import-from-modal').on('click', function() {
-                    var pid = $(this).data('pid');
-                    getProductDataForImport(pid);
-                });
             }
 
-            // Function to import a product
-            function importProduct() {
-                if (!currentProductPid || !currentProductData) {
-                    return;
+            function buildProductDetailsContent(product, variants) {
+                var hasVariants = variants && variants.length > 0;
+                var variantsHtml = '';
+
+                if (hasVariants) {
+                    variantsHtml = '<div class="product-variants"><h4>' + $t('Product Variants') + ' (' + variants.length + ')</h4>';
+                    $.each(variants, function(index, variant) {
+                        variantsHtml += '<div class="variant-item">' +
+                            '<div class="variant-header">' +
+                            '<div class="variant-name">' + (variant.propertyValueName || 'Variant ' + (index + 1)) + '</div>' +
+                            '<div class="variant-price">$' + (variant.variantSellPrice || '0.00') + '</div>' +
+                            '</div>' +
+                            (variant.variantImage ? '<div class="variant-image"><img src="' + variant.variantImage + '" alt="' + $t('Variant Image') + '" /></div>' : '') +
+                            '<div class="variant-stock">' + $t('Stock') + ': ' + (variant.variantStock || '0') + '</div>' +
+                            (variant.variantSku ? '<div class="variant-sku">' + $t('SKU') + ': ' + variant.variantSku + '</div>' : '') +
+                            '</div>';
+                    });
+                    variantsHtml += '</div>';
                 }
 
-                // Show loading message
-                var loadingModal = $('<div class="loading-overlay"><div class="loading-message">' + $t('Importing product...') + '</div></div>');
-                $('body').append(loadingModal);
+                return '<div class="product-detail-modal">' +
+                    '<div class="product-images">' +
+                    '<img src="' + (product.productImage || config.placeholderImage) + '" alt="' + $t('Product Image') + '" />' +
+                    '</div>' +
+                    '<div class="product-info">' +
+                    '<h2>' + (product.productNameEn || 'No Name') + '</h2>' +
+                    '<div class="product-detail"><strong>' + $t('Price') + ':</strong> $' + (product.sellPrice || '0.00') + '</div>' +
+                    '<div class="product-detail"><strong>' + $t('SKU') + ':</strong> ' + (product.productSku || 'N/A') + '</div>' +
+                    '<div class="product-detail"><strong>' + $t('Stock') + ':</strong> ' + (product.stock || '0') + '</div>' +
+                    (product.packageWeight ? '<div class="product-detail"><strong>' + $t('Weight') + ':</strong> ' + product.packageWeight + ' kg</div>' : '') +
+                    '<div class="product-description"><strong>' + $t('Description') + ':</strong><br>' + (product.description || $t('No description available.')) + '</div>' +
+                    variantsHtml +
+                    '</div>' +
+                    '</div>';
+            }
 
-                // Get form values
-                var importType = $('#import-type').val();
-                var markupPercentage = $('#markup-percentage').val();
-                var stockQuantity = $('#stock-quantity').val();
-                var categoryIds = $('#category-ids').val();
+            function showLoadingModal(message) {
+                var modal = $('<div class="loading-overlay"><div class="loading-message">' + message + '</div></div>');
+                $('body').append(modal);
+                return modal;
+            }
 
-                // Send import request
-                $.ajax({
-                    url: config.importUrl,
-                    type: 'POST',
-                    dataType: 'json',
-                    data: {
-                        pid: currentProductPid,
-                        import_type: importType,
-                        markup_percentage: markupPercentage,
-                        stock_quantity: stockQuantity,
-                        category_ids: categoryIds,
-                        form_key: window.FORM_KEY
-                    },
-                    success: function(response) {
-                        loadingModal.remove();
-                        hideImportForm();
-
-                        if (response.success) {
-                            // Show success message
-                            alert({
-                                title: $t('Success'),
-                                content: response.message || $t('Product has been imported successfully.')
-                            });
-                        } else {
-                            // Show error message
-                            alert({
-                                title: $t('Error'),
-                                content: response.message || $t('Could not import product. Please try again.')
-                            });
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        loadingModal.remove();
-                        hideImportForm();
-
-                        // Show error message
-                        alert({
-                            title: $t('Error'),
-                            content: $t('An error occurred during import. Please try again.')
-                        });
-                        console.error('AJAX Error:', error);
-                    }
-                });
+            function showAlert(title, content) {
+                alert({ title: title, content: content });
             }
         });
     };

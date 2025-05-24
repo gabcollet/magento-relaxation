@@ -103,15 +103,46 @@
     </div>
 </div>
 
+<!-- Formulaire de sélection d'attribut (Modal) -->
+<div class="form-overlay" id="attribute-selection-overlay"></div>
+<div class="attribute-selection-modal" id="attribute-selection-modal">
+    <div class="form-header">
+        <h3>Select Configurable Attributes</h3>
+        <button type="button" class="close-form" id="close-attribute-modal">&times;</button>
+    </div>
+
+    <div class="modal-content">
+        <p class="info-text">Select which variant attributes should be configurable options:</p>
+
+        <div id="attributes-list" class="attributes-container">
+            <!-- Attributes will be loaded here -->
+        </div>
+
+        <div class="selection-summary">
+            <span id="selected-count">0</span> attributes selected
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="action-secondary" id="cancel-attribute-selection">Cancel</button>
+        <button type="button" class="action-primary" id="confirm-attribute-selection" disabled>Continue Import</button>
+    </div>
+</div>
+
+<div class="configurable-info" style="display: none;">
+    <p class="info-note">For configurable products, you'll be able to select which variant attributes to use as configurable options.</p>
+</div>
+
 <script type="text/x-magento-init">
 {
     "*": {
         "Gab_Dropshipping/js/import-products": {
-            "searchUrl": "<?= $block->getUrl('dropshipping/import/search') ?>",
-            "detailsUrl": "<?= $block->getUrl('dropshipping/import/details') ?>",
-            "importUrl": "<?= $block->getUrl('dropshipping/import/importProduct') ?>",
-            "getVariantsUrl": "<?= $block->getUrl('dropshipping/import/getVariants') ?>",
-            "placeholderImage": "<?= $block->getViewFileUrl('Gab_Dropshipping::images/product-placeholder.png') ?>"
+            "searchUrl": "<?= $block->escapeJs($block->getUrl('dropshipping/import/search')) ?>",
+            "detailsUrl": "<?= $block->escapeJs($block->getUrl('dropshipping/import/details')) ?>",
+            "importUrl": "<?= $block->escapeJs($block->getUrl('dropshipping/import/importProduct')) ?>",
+            "getVariantsUrl": "<?= $block->escapeJs($block->getUrl('dropshipping/import/getVariants')) ?>",
+            "selectAttributesUrl": "<?= $block->escapeJs($block->getUrl('dropshipping/import/selectAttributes')) ?>",
+            "placeholderImage": "<?= $block->escapeJs($block->getViewFileUrl('Gab_Dropshipping::images/product-placeholder.png')) ?>"
         }
     }
 }

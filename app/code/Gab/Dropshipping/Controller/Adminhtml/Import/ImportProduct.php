@@ -84,6 +84,14 @@ class ImportProduct extends Action
             $markupPercentage = $this->getRequest()->getParam('markup_percentage', null);
             $stockQuantity = $this->getRequest()->getParam('stock_quantity', null);
             $categoryIds = $this->getRequest()->getParam('category_ids', []);
+            $selectedAttributes = $this->getRequest()->getParam('selected_attributes', []);
+
+            if (empty($selectedAttributes)) {
+                return $result->setData([
+                    'success' => false,
+                    'message' => __('No configurable attributes selected.')
+                ]);
+            }
 
             if (!$pid) {
                 return $result->setData([
@@ -92,15 +100,6 @@ class ImportProduct extends Action
                 ]);
             }
 
-            $this->logger->debug('Import product request', [
-                'pid' => $pid,
-                'import_type' => $importType,
-                'markup_percentage' => $markupPercentage,
-                'stock_quantity' => $stockQuantity,
-                'category_ids' => $categoryIds
-            ]);
-
-            // Récupérer les détails du produit depuis l'API CJ Dropshipping
             $response = $this->apiClient->getProductDetails($pid);
 
             if (!isset($response['data'])) {
@@ -113,7 +112,6 @@ class ImportProduct extends Action
 
             $productData = $response['data'];
 
-            // Créer l'importateur et vérifier si le produit existe déjà
             $importManager = $this->importManagerFactory->create();
 
             if ($importManager->productExists('CJ-' . $pid)) {
@@ -123,26 +121,39 @@ class ImportProduct extends Action
                 ]);
             }
 
-            // Utiliser les valeurs du formulaire ou les valeurs par défaut de la configuration
             $markup = ($markupPercentage !== null) ? (float)$markupPercentage / 100 : $this->config->getMarkupPercentage() / 100;
             $stockQty = ($stockQuantity !== null) ? (int)$stockQuantity : $this->config->getDefaultStock();
 
             if ($importType === 'simple') {
-                // Importer comme produit simple
                 $importResult = $importManager->importSimpleProduct($productData, $pid, $markup, $stockQty, $categoryIds);
             } else {
-                // Importer comme produit configurable - d'abord, récupérer les variantes
-                $variantsResponse = $this->apiClient->getProductVariants($pid);
+                $selectedAttributes = $this->getRequest()->getParam('selected_attributes', []);
 
+                if (empty($selectedAttributes)) {
+                    return $result->setData([
+                        'success' => false,
+                        'message' => __('No configurable attributes selected.')
+                    ]);
+                }
+
+                $variantsResponse = $this->apiClient->getProductVariants($pid);
                 if (!isset($variantsResponse['data']) || empty($variantsResponse['data'])) {
                     return $result->setData([
                         'success' => false,
-                        'message' => __('No variants found for this product. Cannot create configurable product.')
+                        'message' => __('No variants found.')
                     ]);
                 }
 
                 $variants = $variantsResponse['data'];
-                $importResult = $importManager->importConfigurableProduct($productData, $variants, $pid, $markup, $stockQty, $categoryIds);
+                $importResult = $importManager->importConfigurableProduct(
+                    $productData,
+                    $variants,
+                    $pid,
+                    $markup,
+                    $stockQty,
+                    $categoryIds,
+                    $selectedAttributes
+                );
             }
 
             return $result->setData($importResult);
